@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🥧 Pi Battle Arena — EdVenture Pi Day 2026</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- ═══ LOADING SCREEN ═══ -->
+  <div id="loading-screen" class="screen active">
+    <div class="loading-content">
+      <div class="pi-logo">π</div>
+      <h1>Pi Battle Arena</h1>
+      <p class="subtitle">EdVenture Children's Museum — Pi Day 2026</p>
+      <div class="loading-bar"><div class="loading-fill"></div></div>
+      <p class="loading-text">Loading...</p>
+    </div>
+  </div>
+
+  <!-- ═══ JOIN SCREEN ═══ -->
+  <div id="join-screen" class="screen">
+    <div class="join-container">
+      <div class="join-header">
+        <div class="pi-icon-small">π</div>
+        <h1>Pi Battle Arena</h1>
+        <p class="tagline">Team up. Fight Pi. Learn. Have fun!</p>
+      </div>
+
+      <div class="join-form">
+        <label for="player-name">Your Hero Name</label>
+        <input type="text" id="player-name" maxlength="16" placeholder="Enter your name..." autocomplete="off">
+        <button id="btn-to-customize" class="btn-primary">Create Your Hero →</button>
+      </div>
+
+      <div class="player-count">
+        <span id="lobby-count">0</span> / 20 Heroes in Lobby
+      </div>
+
+      <!-- Admin toggle -->
+      <div class="admin-toggle">
+        <button id="btn-admin-toggle" class="btn-small">🔧 Admin</button>
+      </div>
+      <div id="admin-login" class="admin-login hidden">
+        <input type="password" id="admin-password" placeholder="Admin password">
+        <button id="btn-admin-auth" class="btn-small">Login</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CUSTOMIZATION SCREEN ═══ -->
+  <div id="customize-screen" class="screen">
+    <div class="customize-layout">
+      <!-- Left: Block coding area -->
+      <div class="customize-left">
+        <h2>🧩 Build Your Hero With Code!</h2>
+        <p class="code-instruction">Drag blocks into the code area to customize your character!</p>
+
+        <!-- Block palette -->
+        <div class="block-palette">
+          <h3>Available Blocks</h3>
+          <div id="block-palette-items" class="palette-items">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Code workspace -->
+        <div class="code-workspace">
+          <h3>Your Code <button id="btn-clear-code" class="btn-tiny">Clear</button></h3>
+          <div id="code-area" class="code-area">
+            <div class="code-placeholder">↓ Drag blocks here ↓</div>
+          </div>
+        </div>
+
+        <!-- Code preview -->
+        <div class="code-preview-area">
+          <h3>Generated Code</h3>
+          <pre id="code-output" class="code-output">// Your code will appear here!</pre>
+        </div>
+      </div>
+
+      <!-- Right: Character preview + weapon select -->
+      <div class="customize-right">
+        <div class="preview-section">
+          <h3>Your Hero</h3>
+          <canvas id="preview-canvas" width="200" height="280"></canvas>
+          <p id="hero-name-display" class="hero-name-display">Hero</p>
+        </div>
+
+        <div class="weapon-section">
+          <h3>⚔️ Choose Your Weapon</h3>
+          <div id="weapon-list" class="weapon-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <button id="btn-join-battle" class="btn-primary btn-big">⚔️ Join the Battle! ⚔️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ GAME SCREEN ═══ -->
+  <div id="game-screen" class="screen">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD Overlay -->
+    <div id="hud" class="hud">
+      <div class="hud-left">
+        <div class="hud-hp">
+          <span class="hud-label">HP</span>
+          <div class="hp-bar"><div id="hp-fill" class="hp-fill"></div></div>
+          <span id="hp-text">100</span>
+        </div>
+        <div class="hud-weapon" id="hud-weapon">Crystal Wand</div>
+        <div class="hud-streak" id="hud-streak"></div>
+      </div>
+      <div class="hud-center">
+        <div class="hud-wave" id="hud-wave">Wave 1</div>
+        <div class="hud-timer" id="hud-timer">0:00</div>
+      </div>
+      <div class="hud-right">
+        <div class="hud-damage">
+          <span class="hud-label">DMG</span>
+          <span id="hud-damage-value">0</span>
+        </div>
+        <button id="btn-show-leaderboard" class="btn-tiny hud-btn">🏆</button>
+      </div>
+    </div>
+
+    <!-- Wave announcement -->
+    <div id="wave-announce" class="wave-announce hidden"></div>
+
+    <!-- Boss HP bar -->
+    <div id="boss-hp-bar" class="boss-hp-bar hidden">
+      <div class="boss-hp-label">🥧 THE MIGHTY PI</div>
+      <div class="boss-hp-track"><div id="boss-hp-fill" class="boss-hp-fill"></div></div>
+      <span id="boss-hp-text"></span>
+    </div>
+
+    <!-- Trivia overlay -->
+    <div id="trivia-overlay" class="overlay hidden">
+      <div class="trivia-card">
+        <h2>💀 You were defeated!</h2>
+        <p>Answer correctly to respawn!</p>
+        <div id="trivia-streak-display" class="trivia-streak"></div>
+        <div class="trivia-question" id="trivia-question"></div>
+        <div class="trivia-choices" id="trivia-choices"></div>
+        <div id="trivia-feedback" class="trivia-feedback hidden"></div>
+      </div>
+    </div>
+
+    <!-- Leaderboard sidebar -->
+    <div id="leaderboard-sidebar" class="leaderboard-sidebar hidden">
+      <h3>🏆 Leaderboard</h3>
+      <div id="leaderboard-list" class="leaderboard-list"></div>
+    </div>
+
+    <!-- Paused overlay -->
+    <div id="paused-overlay" class="overlay hidden">
+      <div class="pause-card">
+        <h2>⏸️ Game Paused</h2>
+        <p>Waiting for the Game Master...</p>
+      </div>
+    </div>
+
+    <!-- Waiting overlay (before game starts) -->
+    <div id="waiting-overlay" class="overlay hidden">
+      <div class="pause-card">
+        <div class="pi-icon-small" style="margin-bottom:16px">π</div>
+        <h2>⚔️ Ready for Battle!</h2>
+        <p>Waiting for the Game Master to start the game...</p>
+        <p style="margin-top:12px; font-size:11px; color:#606080">Use WASD to move, mouse to aim, click to shoot</p>
+      </div>
+    </div>
+
+    <!-- Admin panel -->
+    <div id="admin-panel" class="admin-panel hidden">
+      <h3>🔧 Admin Controls</h3>
+      <button id="btn-admin-start" class="btn-admin">▶️ Start Game</button>
+      <button id="btn-admin-pause" class="btn-admin">⏸️ Pause/Resume</button>
+      <button id="btn-admin-stop" class="btn-admin">⏹️ End Game</button>
+      <button id="btn-admin-reset" class="btn-admin">🔄 Reset</button>
+      <div class="admin-info">
+        <span id="admin-player-count">Players: 0</span>
+        <span id="admin-wave">Wave: —</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ VICTORY / END SCREEN ═══ -->
+  <div id="end-screen" class="screen">
+    <div class="end-content">
+      <div class="confetti-container" id="confetti-container"></div>
+      <h1 id="end-title">🎉 Victory! 🎉</h1>
+      <p id="end-subtitle">Pi has been defeated! Great job, heroes!</p>
+
+      <div class="final-leaderboard">
+        <h2>🏆 Final Rankings 🏆</h2>
+        <div id="final-leaderboard-list" class="final-leaderboard-list"></div>
+      </div>
+
+      <div class="end-stats">
+        <div class="stat-card">
+          <span class="stat-value" id="end-total-damage">0</span>
+          <span class="stat-label">Total Damage</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="end-time">0:00</span>
+          <span class="stat-label">Time</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="end-players">0</span>
+          <span class="stat-label">Heroes</span>
+        </div>
+      </div>
+
+      <p class="end-message">🥧 Happy Pi Day from EdVenture! 🥧</p>
+      <p class="end-sub">Remember: Pi = 3.14159265358979...</p>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "pi-battle-arena",
+  "version": "1.0.0",
+  "description": "A multiplayer Pi-Day boss battle game for EdVenture Children's Museum — wave-based shooter with block-coding character customization, trivia respawn, and real-time leaderboard.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4"
+  },
+  "keywords": ["game", "multiplayer", "pi-day", "educational", "socket.io"],
+  "author": "Ty Bennett",
+  "license": "MIT"
+}
