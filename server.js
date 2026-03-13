@@ -8,6 +8,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,7 +18,16 @@ const io = new Server(server, {
   pingTimeout: 5000
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+// In Docker: files are at ./public/ (built by Dockerfile)
+// In local dev: files are at project root; remap the subpaths HTML expects
+const publicDir = path.join(__dirname, 'public');
+if (fs.existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+} else {
+  app.use(express.static(__dirname));
+  app.get('/js/main.js',    (_req, res) => res.sendFile(path.join(__dirname, 'main.js')));
+  app.get('/css/style.css', (_req, res) => res.sendFile(path.join(__dirname, 'style.css')));
+}
 
 // ─── CONFIGURATION ──────────────────────────────────────────
 const CONFIG = {
@@ -25,7 +35,7 @@ const CONFIG = {
   ARENA_W: 1600,
   ARENA_H: 900,
   MAX_PLAYERS: 20,
-  PLAYER_SPEED: 6,
+  PLAYER_SPEED: 4,
   PLAYER_HP: 100,
   PLAYER_RADIUS: 18,
   BOSS_BASE_HP: 5000,
@@ -81,50 +91,15 @@ const TRIVIA = [
 
 // ─── WEAPON DEFINITIONS ─────────────────────────────────────
 const WEAPONS = {
-  crystal_wand: {
-    name: "Crystal Wand",
-    damage: 12,
-    fireRate: 12,
-    spread: 1,
-    spreadAngle: 0,
-    projectileColor: "#00d4ff",
-    description: "Focused beam of crystal energy"
-  },
-  storm_staff: {
-    name: "Storm Staff",
-    damage: 7,
+  laser: {
+    name: "Laser",
+    damage: 8,
     fireRate: 15,
-    spread: 5,
-    spreadAngle: 0.4,
-    projectileColor: "#a855f7",
-    description: "Wide lightning spread"
-  },
-  flame_bow: {
-    name: "Flame Bow",
-    damage: 10,
-    fireRate: 18,
-    spread: 3,
-    spreadAngle: 0.15,
-    projectileColor: "#ff6b35",
-    description: "Triple fire arrows"
-  },
-  frost_scepter: {
-    name: "Frost Scepter",
-    damage: 9,
-    fireRate: 10,
-    spread: 2,
-    spreadAngle: 0.08,
-    projectileColor: "#67e8f9",
-    description: "Twin ice bolts"
-  },
-  golden_wand: {
-    name: "Golden Wand ★",
-    damage: 9999,
-    fireRate: 30,
     spread: 1,
     spreadAngle: 0,
-    projectileColor: "#ffd700",
-    description: "Legendary one-shot power!"
+    projectileColor: '#00d4ff',
+    projectileSize: 4,
+    description: "Standard laser cannon"
   }
 };
 
@@ -157,69 +132,69 @@ function getWaveConfig(wave, playerCount) {
   const waves = [
     { // Wave 1
       message: "⚡ Wave 1 — The Numbers Awaken!",
-      pawns: Math.floor(3 + pc * 0.5),
+      pawns: Math.floor(8 + pc * 2),
       pawnHP: 40,
       pawnSpeed: 3.5,
       bossActive: false,
-      spawnInterval: 120
+      spawnInterval: 80
     },
     { // Wave 2
       message: "📐 Wave 2 — Geometry Strikes!",
-      pawns: Math.floor(5 + pc * 0.8),
+      pawns: Math.floor(14 + pc * 2.5),
       pawnHP: 50,
       pawnSpeed: 4.0,
       bossActive: false,
-      spawnInterval: 100
+      spawnInterval: 70
     },
     { // Wave 3
       message: "🔢 Wave 3 — The Equation Horde!",
-      pawns: Math.floor(6 + pc),
+      pawns: Math.floor(18 + pc * 3),
       pawnHP: 55,
       pawnSpeed: 4.5,
       bossActive: false,
-      spawnInterval: 90
+      spawnInterval: 60
     },
     { // Wave 4
       message: "⚠️ Wave 4 — Pi Sends Its Minions!",
-      pawns: Math.floor(8 + pc * 1.2),
+      pawns: Math.floor(22 + pc * 3),
       pawnHP: 60,
       pawnSpeed: 5.0,
       bossActive: false,
-      spawnInterval: 80
+      spawnInterval: 55
     },
     { // Wave 5 - Mini boss
       message: "🔥 Wave 5 — Mini Pi Appears!",
-      pawns: Math.floor(4 + pc * 0.5),
+      pawns: Math.floor(12 + pc * 2),
       pawnHP: 70,
       pawnSpeed: 4.5,
       bossActive: true,
       bossHPMult: 0.3,
-      spawnInterval: 100
+      spawnInterval: 65
     },
     { // Wave 6
       message: "💀 Wave 6 — The Numbers Strike Back!",
-      pawns: Math.floor(10 + pc * 1.5),
+      pawns: Math.floor(26 + pc * 4),
       pawnHP: 70,
       pawnSpeed: 5.5,
       bossActive: false,
-      spawnInterval: 70
+      spawnInterval: 50
     },
     { // Wave 7
       message: "🌀 Wave 7 — Infinite Sequence!",
-      pawns: Math.floor(12 + pc * 1.5),
+      pawns: Math.floor(30 + pc * 4),
       pawnHP: 80,
       pawnSpeed: 6.5,
       bossActive: false,
-      spawnInterval: 60
+      spawnInterval: 45
     },
     { // Wave 8 - FINAL BOSS
       message: "👑 FINAL WAVE — THE MIGHTY PI AWAKENS!",
-      pawns: Math.floor(5 + pc),
+      pawns: Math.floor(16 + pc * 2),
       pawnHP: 90,
       pawnSpeed: 7.0,
       bossActive: true,
       bossHPMult: 1.0,
-      spawnInterval: 90
+      spawnInterval: 60
     }
   ];
   return waves[Math.min(wave, waves.length - 1)];
@@ -331,8 +306,16 @@ function gameTick() {
         broadcastState();
         return;
       }
-      betweenWaveTimer = CONFIG.TICK_RATE * 4; // 4 second break
-      gameState.waveMessage = `✅ Wave ${gameState.wave + 1} Complete!`;
+      // Award 1 upgrade point to surviving players
+      for (const p of Object.values(gameState.players)) {
+        if (p.alive) {
+          p.upgradePoints = (p.upgradePoints || 0) + 1;
+          io.to(p.socketId).emit('upgradeAvailable', { wave: gameState.wave + 1 });
+        }
+      }
+      gameState.projectiles = []; // clear lingering bullets so they don't glitch frozen
+      betweenWaveTimer = CONFIG.TICK_RATE * 5; // 5 second break (extra time for upgrades)
+      gameState.waveMessage = `✅ Wave ${gameState.wave + 1} Complete! Choose an upgrade!`;
       gameState.waveMessageTimer = CONFIG.TICK_RATE * 3;
     }
   }
@@ -602,27 +585,30 @@ function updatePlayers() {
 
     // Shooting
     if (p.input.shooting && p.fireTimer <= 0) {
-      const weapon = WEAPONS[p.weapon] || WEAPONS.crystal_wand;
-      const angle = p.input.aimAngle || 0;
+      const ups = p.upgrades || { damage: 0, fireRate: 0, multiShot: 0, speed: 0 };
+      const dmg      = 8  + ups.damage   * 5;
+      const fr       = Math.max(5, 15 - ups.fireRate  * 2);
+      const spread   = 1  + ups.multiShot;
+      const bspeed   = CONFIG.PROJECTILE_SPEED + ups.speed * 3;
+      const angle    = p.input.aimAngle || 0;
+      const bcolor   = '#00d4ff';
 
-      for (let s = 0; s < weapon.spread; s++) {
-        const offset = weapon.spread > 1
-          ? (s - (weapon.spread - 1) / 2) * weapon.spreadAngle
-          : 0;
+      for (let s = 0; s < spread; s++) {
+        const offset = spread > 1 ? (s - (spread - 1) / 2) * 0.18 : 0;
         const a = angle + offset;
         gameState.projectiles.push({
           id: uid(),
-          x: p.x,
-          y: p.y,
-          vx: Math.cos(a) * CONFIG.PROJECTILE_SPEED,
-          vy: Math.sin(a) * CONFIG.PROJECTILE_SPEED,
-          damage: weapon.damage,
+          x: p.x + Math.cos(a) * 16,
+          y: p.y + Math.sin(a) * 16,
+          vx: Math.cos(a) * bspeed,
+          vy: Math.sin(a) * bspeed,
+          damage: dmg,
           owner: p.id,
           life: CONFIG.PROJECTILE_LIFETIME,
-          color: weapon.projectileColor
+          color: bcolor
         });
       }
-      p.fireTimer = weapon.fireRate;
+      p.fireTimer = fr;
     }
     if (p.fireTimer > 0) p.fireTimer -= (CONFIG.TICK_RATE / 20);
   }
@@ -691,7 +677,10 @@ function broadcastState() {
       alive: p.alive, name: p.name, weapon: p.weapon,
       customization: p.customization, totalDamage: p.totalDamage || 0,
       hasGoldenGun: p.weapon === 'golden_wand',
-      triviaStreak: p.triviaStreak || 0
+      triviaStreak: p.triviaStreak || 0,
+      aimAngle: p.input?.aimAngle || 0,
+      upgradePoints: p.upgradePoints || 0,
+      upgrades: p.upgrades || { damage: 0, fireRate: 0, multiShot: 0, speed: 0 }
     };
   }
 
@@ -754,13 +743,15 @@ io.on('connection', (socket) => {
       y: CONFIG.ARENA_H - 150 + Math.random() * 80,
       hp: CONFIG.PLAYER_HP,
       alive: true,
-      weapon: data.weapon || 'crystal_wand',
+      weapon: 'laser',
       customization: data.customization || {},
       input: { w: false, a: false, s: false, d: false, shooting: false, aimAngle: 0 },
       fireTimer: 0,
       totalDamage: 0,
       deaths: 0,
-      triviaStreak: 0
+      triviaStreak: 0,
+      upgradePoints: 0,
+      upgrades: { damage: 0, fireRate: 0, multiShot: 0, speed: 0 }
     };
 
     gameState.leaderboard[playerId] = { damage: 0, name: data.name || 'Player' };
@@ -783,6 +774,17 @@ io.on('connection', (socket) => {
         aimAngle: data.aimAngle || 0
       };
     }
+  });
+
+  // Upgrade application
+  socket.on('applyUpgrade', (type) => {
+    const p = gameState.players[socket.id];
+    if (!p || (p.upgradePoints || 0) < 1) return;
+    const maxLevels = { damage: 5, fireRate: 5, multiShot: 3, speed: 3 };
+    if (!maxLevels[type] || (p.upgrades[type] || 0) >= maxLevels[type]) return;
+    p.upgradePoints--;
+    p.upgrades[type]++;
+    socket.emit('upgradeConfirmed', { upgrades: p.upgrades, points: p.upgradePoints });
   });
 
   // Trivia answer
@@ -843,7 +845,9 @@ io.on('connection', (socket) => {
           p.fireTimer = 0;
           p.x = 200 + Math.random() * (CONFIG.ARENA_W - 400);
           p.y = CONFIG.ARENA_H - 150 + Math.random() * 80;
-          if (p.weapon === 'golden_wand') p.weapon = 'crystal_wand';
+          if (p.weapon === 'golden_wand') p.weapon = 'laser';
+          p.upgradePoints = 0;
+          p.upgrades = { damage: 0, fireRate: 0, multiShot: 0, speed: 0 };
           gameState.players[id] = p;
           gameState.leaderboard[id] = { damage: 0, name: p.name };
         }

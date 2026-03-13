@@ -30,13 +30,13 @@
       </div>
 
       <div class="join-form">
-        <label for="player-name">Your Hero Name</label>
+        <label for="player-name">Your Pilot Name</label>
         <input type="text" id="player-name" maxlength="16" placeholder="Enter your name..." autocomplete="off">
-        <button id="btn-to-customize" class="btn-primary">Create Your Hero →</button>
+        <button id="btn-to-customize" class="btn-primary">Design Your Ship →</button>
       </div>
 
       <div class="player-count">
-        <span id="lobby-count">0</span> / 20 Heroes in Lobby
+        <span id="lobby-count">0</span> / 20 Pilots in Lobby
       </div>
 
       <!-- Admin toggle -->
@@ -53,50 +53,43 @@
   <!-- ═══ CUSTOMIZATION SCREEN ═══ -->
   <div id="customize-screen" class="screen">
     <div class="customize-layout">
-      <!-- Left: Block coding area -->
-      <div class="customize-left">
-        <h2>🧩 Build Your Hero With Code!</h2>
-        <p class="code-instruction">Drag blocks into the code area to customize your character!</p>
 
-        <!-- Block palette -->
+      <!-- Column 1: Block palette (LEFT) -->
+      <div class="customize-palette">
+        <h2>🚀 Build Your Ship!</h2>
+        <p class="code-instruction">Click blocks to customize your spaceship!</p>
         <div class="block-palette">
-          <h3>Available Blocks</h3>
+          <h3>Ship Blocks</h3>
           <div id="block-palette-items" class="palette-items">
             <!-- Populated by JS -->
           </div>
         </div>
+      </div>
 
-        <!-- Code workspace -->
+      <!-- Column 2: Code workspace (CENTER) -->
+      <div class="customize-center">
         <div class="code-workspace">
           <h3>Your Code <button id="btn-clear-code" class="btn-tiny">Clear</button></h3>
           <div id="code-area" class="code-area">
-            <div class="code-placeholder">↓ Drag blocks here ↓</div>
+            <div class="code-placeholder">↓ Click blocks to add them ↓</div>
           </div>
         </div>
 
-        <!-- Code preview -->
         <div class="code-preview-area">
           <h3>Generated Code</h3>
           <pre id="code-output" class="code-output">// Your code will appear here!</pre>
         </div>
       </div>
 
-      <!-- Right: Character preview + weapon select -->
+      <!-- Column 3: Ship preview + join (RIGHT) -->
       <div class="customize-right">
         <div class="preview-section">
-          <h3>Your Hero</h3>
-          <canvas id="preview-canvas" width="200" height="280"></canvas>
-          <p id="hero-name-display" class="hero-name-display">Hero</p>
+          <h3>Your Ship</h3>
+          <canvas id="preview-canvas" width="200" height="220"></canvas>
+          <p id="hero-name-display" class="hero-name-display">Pilot</p>
         </div>
 
-        <div class="weapon-section">
-          <h3>⚔️ Choose Your Weapon</h3>
-          <div id="weapon-list" class="weapon-list">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-
-        <button id="btn-join-battle" class="btn-primary btn-big">⚔️ Join the Battle! ⚔️</button>
+        <button id="btn-join-battle" class="btn-primary btn-big">🚀 Join the Battle! 🚀</button>
       </div>
     </div>
   </div>
@@ -113,7 +106,6 @@
           <div class="hp-bar"><div id="hp-fill" class="hp-fill"></div></div>
           <span id="hp-text">100</span>
         </div>
-        <div class="hud-weapon" id="hud-weapon">Crystal Wand</div>
         <div class="hud-streak" id="hud-streak"></div>
       </div>
       <div class="hud-center">
@@ -125,7 +117,7 @@
           <span class="hud-label">DMG</span>
           <span id="hud-damage-value">0</span>
         </div>
-        <button id="btn-show-leaderboard" class="btn-tiny hud-btn">🏆</button>
+        <div class="hud-upgrades" id="hud-upgrades"></div>
       </div>
     </div>
 
@@ -139,10 +131,23 @@
       <span id="boss-hp-text"></span>
     </div>
 
+    <!-- Upgrade panel (shown between waves) -->
+    <div id="upgrade-panel" class="upgrade-panel hidden">
+      <h3>⚡ Wave Complete!</h3>
+      <p id="upgrade-points-display">Points: 0</p>
+      <div class="upgrade-grid">
+        <button class="upgrade-btn" data-type="damage">💥 Damage<br><span>Level 0/5</span></button>
+        <button class="upgrade-btn" data-type="fireRate">🔥 Fire Rate<br><span>Level 0/5</span></button>
+        <button class="upgrade-btn" data-type="multiShot">↔ Multi-Shot<br><span>Level 0/3</span></button>
+        <button class="upgrade-btn" data-type="speed">⚡ Bolt Speed<br><span>Level 0/3</span></button>
+      </div>
+      <p class="upgrade-hint">Each upgrade costs 1 point. Points carry over between waves.</p>
+    </div>
+
     <!-- Trivia overlay -->
     <div id="trivia-overlay" class="overlay hidden">
       <div class="trivia-card">
-        <h2>💀 You were defeated!</h2>
+        <h2>💀 Ship Destroyed!</h2>
         <p>Answer correctly to respawn!</p>
         <div id="trivia-streak-display" class="trivia-streak"></div>
         <div class="trivia-question" id="trivia-question"></div>
@@ -151,9 +156,9 @@
       </div>
     </div>
 
-    <!-- Leaderboard sidebar -->
-    <div id="leaderboard-sidebar" class="leaderboard-sidebar hidden">
-      <h3>🏆 Leaderboard</h3>
+    <!-- Leaderboard sidebar (always visible) -->
+    <div id="leaderboard-sidebar" class="leaderboard-sidebar">
+      <h3>🏆 Top Pilots</h3>
       <div id="leaderboard-list" class="leaderboard-list"></div>
     </div>
 
@@ -169,7 +174,7 @@
     <div id="waiting-overlay" class="overlay hidden">
       <div class="pause-card">
         <div class="pi-icon-small" style="margin-bottom:16px">π</div>
-        <h2>⚔️ Ready for Battle!</h2>
+        <h2>🚀 Ready for Launch!</h2>
         <p>Waiting for the Game Master to start the game...</p>
         <p style="margin-top:12px; font-size:11px; color:#606080">Use WASD to move, mouse to aim, click to shoot</p>
       </div>
@@ -194,7 +199,7 @@
     <div class="end-content">
       <div class="confetti-container" id="confetti-container"></div>
       <h1 id="end-title">🎉 Victory! 🎉</h1>
-      <p id="end-subtitle">Pi has been defeated! Great job, heroes!</p>
+      <p id="end-subtitle">Pi has been defeated! Great job, pilots!</p>
 
       <div class="final-leaderboard">
         <h2>🏆 Final Rankings 🏆</h2>
@@ -212,7 +217,7 @@
         </div>
         <div class="stat-card">
           <span class="stat-value" id="end-players">0</span>
-          <span class="stat-label">Heroes</span>
+          <span class="stat-label">Pilots</span>
         </div>
       </div>
 

@@ -15,13 +15,12 @@ let currentScreen = 'loading';
 
 // Player state
 let playerName = '';
-let selectedWeapon = 'crystal_wand';
 let customization = {
-  bodyColor: '#00d4ff',
-  hatType: 'none',
-  hatColor: '#a855f7',
-  shirtColor: '#1e3a5f',
-  shoesColor: '#ff6b35'
+  shipBody:    'fighter',
+  shipColor:   '#00d4ff',
+  accentColor: '#ff3b5c',
+  pattern:     'plain',
+  engineColor: '#ffd700'
 };
 
 // Game state (from server)
@@ -31,6 +30,7 @@ let gs = null;
 const keys = { w: false, a: false, s: false, d: false };
 let mouseX = 0, mouseY = 0;
 let mouseDown = false;
+let lastAimAngle = 0;
 
 // Canvas & rendering
 let canvas, ctx;
@@ -40,9 +40,6 @@ let cameraX = 0, cameraY = 0;
 
 // Particles (client-side only for effects)
 let localParticles = [];
-
-// Leaderboard toggle
-let showLeaderboard = false;
 
 // ── Smoothness / interpolation ──────────────────────────────
 let prevGs = null;
@@ -60,9 +57,13 @@ let predictX = 0, predictY = 0, hasPrediction = false;
 let frameDt = 16.67;
 const displayPos = { pawns: {}, boss: null, players: {} };
 
+// Upgrade tracking
+let myUpgradePoints = 0;
+let myUpgrades = { damage: 0, fireRate: 0, multiShot: 0, speed: 0 };
+
 // Stars background
 let stars = [];
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < 120; i++) {
   stars.push({
     x: Math.random() * 1600,
     y: Math.random() * 900,
@@ -95,7 +96,6 @@ socket.on('welcome', (data) => {
   gameW = CONFIG.ARENA_W;
   gameH = CONFIG.ARENA_H;
 
-  // Small delay for loading screen effect
   setTimeout(() => {
     showScreen('join');
     initCustomizer();
@@ -105,7 +105,6 @@ socket.on('welcome', (data) => {
 socket.on('joined', (data) => {
   myId = data.id;
   showScreen('game');
-  // Show waiting overlay if game hasn't started
   if (!gs || gs.phase === 'lobby') {
     document.getElementById('waiting-overlay').classList.remove('hidden');
   }
@@ -123,7 +122,7 @@ socket.on('gameState', (state) => {
   gs = state;
   lastStateTime = performance.now();
 
-  // Pawn deaths → burst particles at last known position
+  // Pawn deaths → burst particles
   if (prevGs?.pawns) {
     const newPawnIds = new Set(state.pawns.map(p => p.id));
     for (const pawn of prevGs.pawns) {
@@ -147,13 +146,22 @@ socket.on('gameState', (state) => {
     if (me.alive) {
       if (!hasPrediction) {
         predictX = me.x; predictY = me.y; hasPrediction = true;
-      } else if (Math.hypot(me.x - predictX, me.y - predictY) > 120) {
-        // Large server drift — snap to authoritative position
-        predictX = me.x; predictY = me.y;
+      } else {
+        const drift = Math.hypot(me.x - predictX, me.y - predictY);
+        if (drift > 150) {
+          predictX = me.x; predictY = me.y;
+        } else {
+          predictX += (me.x - predictX) * 0.15;
+          predictY += (me.y - predictY) * 0.15;
+        }
       }
     } else {
       hasPrediction = false;
     }
+
+    // Sync upgrade data from state
+    if (me.upgradePoints !== undefined) myUpgradePoints = me.upgradePoints;
+    if (me.upgrades) myUpgrades = me.upgrades;
   }
 
   if (state.phase === 'playing') {
@@ -180,10 +188,11 @@ socket.on('waveStart', (data) => {
   if (isAdmin) {
     document.getElementById('admin-wave').textContent = `Wave: ${data.wave}`;
   }
+  // Hide upgrade panel when next wave starts
+  document.getElementById('upgrade-panel').classList.add('hidden');
 });
 
 socket.on('bossDefeated', () => {
-  // Celebratory particles
   for (let i = 0; i < 50; i++) {
     localParticles.push({
       x: gameW / 2 + (Math.random() - 0.5) * 200,
@@ -203,9 +212,7 @@ socket.on('playerDied', (data) => {
 
 socket.on('respawned', (data) => {
   hideTrivia();
-  if (data.goldenGun) {
-    showGoldenGunEffect();
-  }
+  if (data.goldenGun) showGoldenGunEffect();
 });
 
 socket.on('goldenGun', () => {
@@ -225,6 +232,17 @@ socket.on('fullReset', () => {
   prevProjMap = {};
   hasPrediction = false;
   showScreen('join');
+});
+
+socket.on('upgradeAvailable', () => {
+  document.getElementById('upgrade-panel').classList.remove('hidden');
+  updateUpgradePanel();
+});
+
+socket.on('upgradeConfirmed', (data) => {
+  myUpgradePoints = data.points;
+  myUpgrades = data.upgrades;
+  updateUpgradePanel();
 });
 
 // ═══════════════════════════════════════════════
@@ -248,7 +266,6 @@ document.getElementById('player-name').addEventListener('keydown', (e) => {
   document.getElementById('player-name').style.borderColor = '';
 });
 
-// Admin
 document.getElementById('btn-admin-toggle').addEventListener('click', () => {
   document.getElementById('admin-login').classList.toggle('hidden');
 });
@@ -256,7 +273,6 @@ document.getElementById('btn-admin-auth').addEventListener('click', () => {
   socket.emit('adminAuth', { password: document.getElementById('admin-password').value });
 });
 
-// Admin game controls
 document.getElementById('btn-admin-start').addEventListener('click', () => socket.emit('adminStart'));
 document.getElementById('btn-admin-pause').addEventListener('click', () => socket.emit('adminPause'));
 document.getElementById('btn-admin-stop').addEventListener('click', () => socket.emit('adminStop'));
@@ -266,65 +282,88 @@ document.getElementById('btn-admin-reset').addEventListener('click', () => socke
 // BLOCK CODING CUSTOMIZER
 // ═══════════════════════════════════════════════
 const BLOCK_DEFS = [
-  // Body colors
-  { id: 'body-blue', label: 'setBodyColor("blue")', category: 'body', action: () => { customization.bodyColor = '#00d4ff'; } },
-  { id: 'body-red', label: 'setBodyColor("red")', category: 'body', action: () => { customization.bodyColor = '#ff3b5c'; } },
-  { id: 'body-green', label: 'setBodyColor("green")', category: 'body', action: () => { customization.bodyColor = '#00ff88'; } },
-  { id: 'body-purple', label: 'setBodyColor("purple")', category: 'body', action: () => { customization.bodyColor = '#a855f7'; } },
-  { id: 'body-gold', label: 'setBodyColor("gold")', category: 'body', action: () => { customization.bodyColor = '#ffd700'; } },
-  { id: 'body-pink', label: 'setBodyColor("pink")', category: 'body', action: () => { customization.bodyColor = '#ff69b4'; } },
-  { id: 'body-orange', label: 'setBodyColor("orange")', category: 'body', action: () => { customization.bodyColor = '#ff6b35'; } },
-  { id: 'body-white', label: 'setBodyColor("white")', category: 'body', action: () => { customization.bodyColor = '#e8e8f0'; } },
-  // Hats
-  { id: 'hat-wizard', label: 'setHat("wizard")', category: 'hat', action: () => { customization.hatType = 'wizard'; } },
-  { id: 'hat-crown', label: 'setHat("crown")', category: 'hat', action: () => { customization.hatType = 'crown'; } },
-  { id: 'hat-cap', label: 'setHat("cap")', category: 'hat', action: () => { customization.hatType = 'cap'; } },
-  { id: 'hat-headband', label: 'setHat("headband")', category: 'hat', action: () => { customization.hatType = 'headband'; } },
-  { id: 'hat-none', label: 'setHat("none")', category: 'hat', action: () => { customization.hatType = 'none'; } },
-  { id: 'hat-color-purple', label: 'setHatColor("purple")', category: 'hat', action: () => { customization.hatColor = '#a855f7'; } },
-  { id: 'hat-color-gold', label: 'setHatColor("gold")', category: 'hat', action: () => { customization.hatColor = '#ffd700'; } },
-  { id: 'hat-color-red', label: 'setHatColor("red")', category: 'hat', action: () => { customization.hatColor = '#ff3b5c'; } },
-  { id: 'hat-color-cyan', label: 'setHatColor("cyan")', category: 'hat', action: () => { customization.hatColor = '#00d4ff'; } },
-  // Shirts
-  { id: 'shirt-blue', label: 'setShirtColor("blue")', category: 'shirt', action: () => { customization.shirtColor = '#1e3a5f'; } },
-  { id: 'shirt-red', label: 'setShirtColor("red")', category: 'shirt', action: () => { customization.shirtColor = '#5f1e1e'; } },
-  { id: 'shirt-green', label: 'setShirtColor("green")', category: 'shirt', action: () => { customization.shirtColor = '#1e5f3a'; } },
-  { id: 'shirt-purple', label: 'setShirtColor("purple")', category: 'shirt', action: () => { customization.shirtColor = '#3a1e5f'; } },
-  { id: 'shirt-black', label: 'setShirtColor("black")', category: 'shirt', action: () => { customization.shirtColor = '#1a1a2e'; } },
-  { id: 'shirt-white', label: 'setShirtColor("white")', category: 'shirt', action: () => { customization.shirtColor = '#c0c0d0'; } },
-  // Shoes
-  { id: 'shoes-orange', label: 'setShoesColor("orange")', category: 'shoes', action: () => { customization.shoesColor = '#ff6b35'; } },
-  { id: 'shoes-black', label: 'setShoesColor("black")', category: 'shoes', action: () => { customization.shoesColor = '#2a2a3a'; } },
-  { id: 'shoes-white', label: 'setShoesColor("white")', category: 'shoes', action: () => { customization.shoesColor = '#d0d0e0'; } },
-  { id: 'shoes-red', label: 'setShoesColor("red")', category: 'shoes', action: () => { customization.shoesColor = '#ff3b5c'; } },
-  { id: 'shoes-gold', label: 'setShoesColor("gold")', category: 'shoes', action: () => { customization.shoesColor = '#ffd700'; } },
+  // Ship body
+  { id: 'body-fighter', label: 'setBody("fighter")', category: 'body', action: () => { customization.shipBody = 'fighter'; } },
+  { id: 'body-bomber',  label: 'setBody("bomber")',  category: 'body', action: () => { customization.shipBody = 'bomber'; } },
+  { id: 'body-scout',   label: 'setBody("scout")',   category: 'body', action: () => { customization.shipBody = 'scout'; } },
+  { id: 'body-cruiser', label: 'setBody("cruiser")', category: 'body', action: () => { customization.shipBody = 'cruiser'; } },
+  // Hull color
+  { id: 'color-cyan',   label: 'setColor("cyan")',   category: 'shipColor', action: () => { customization.shipColor = '#00d4ff'; } },
+  { id: 'color-red',    label: 'setColor("red")',    category: 'shipColor', action: () => { customization.shipColor = '#ff3b5c'; } },
+  { id: 'color-green',  label: 'setColor("green")',  category: 'shipColor', action: () => { customization.shipColor = '#00ff88'; } },
+  { id: 'color-purple', label: 'setColor("purple")', category: 'shipColor', action: () => { customization.shipColor = '#a855f7'; } },
+  { id: 'color-gold',   label: 'setColor("gold")',   category: 'shipColor', action: () => { customization.shipColor = '#ffd700'; } },
+  { id: 'color-white',  label: 'setColor("white")',  category: 'shipColor', action: () => { customization.shipColor = '#dde0f0'; } },
+  { id: 'color-orange', label: 'setColor("orange")', category: 'shipColor', action: () => { customization.shipColor = '#ff6b35'; } },
+  // Accent color
+  { id: 'accent-red',    label: 'setAccent("red")',    category: 'accentColor', action: () => { customization.accentColor = '#ff3b5c'; } },
+  { id: 'accent-cyan',   label: 'setAccent("cyan")',   category: 'accentColor', action: () => { customization.accentColor = '#00d4ff'; } },
+  { id: 'accent-gold',   label: 'setAccent("gold")',   category: 'accentColor', action: () => { customization.accentColor = '#ffd700'; } },
+  { id: 'accent-green',  label: 'setAccent("green")',  category: 'accentColor', action: () => { customization.accentColor = '#00ff88'; } },
+  { id: 'accent-purple', label: 'setAccent("purple")', category: 'accentColor', action: () => { customization.accentColor = '#a855f7'; } },
+  { id: 'accent-orange', label: 'setAccent("orange")', category: 'accentColor', action: () => { customization.accentColor = '#ff6b35'; } },
+  // Pattern
+  { id: 'pattern-plain',   label: 'setPattern("plain")',   category: 'pattern', action: () => { customization.pattern = 'plain'; } },
+  { id: 'pattern-stripes', label: 'setPattern("stripes")', category: 'pattern', action: () => { customization.pattern = 'stripes'; } },
+  { id: 'pattern-chevron', label: 'setPattern("chevron")', category: 'pattern', action: () => { customization.pattern = 'chevron'; } },
+  { id: 'pattern-dots',    label: 'setPattern("dots")',    category: 'pattern', action: () => { customization.pattern = 'dots'; } },
+  // Engine glow
+  { id: 'engine-blue',   label: 'setEngine("blue")',   category: 'engineColor', action: () => { customization.engineColor = '#00d4ff'; } },
+  { id: 'engine-orange', label: 'setEngine("orange")', category: 'engineColor', action: () => { customization.engineColor = '#ff6b35'; } },
+  { id: 'engine-purple', label: 'setEngine("purple")', category: 'engineColor', action: () => { customization.engineColor = '#a855f7'; } },
+  { id: 'engine-green',  label: 'setEngine("green")',  category: 'engineColor', action: () => { customization.engineColor = '#00ff88'; } },
+  { id: 'engine-gold',   label: 'setEngine("gold")',   category: 'engineColor', action: () => { customization.engineColor = '#ffd700'; } },
+  { id: 'engine-red',    label: 'setEngine("red")',    category: 'engineColor', action: () => { customization.engineColor = '#ff3b5c'; } },
 ];
 
 let codeAreaBlocks = [];
+
+const CATEGORY_LABELS = {
+  body:        '🚀 Ship Body',
+  shipColor:   '🎨 Hull Color',
+  accentColor: '✨ Accent Color',
+  pattern:     '🔷 Pattern',
+  engineColor: '🔥 Engine Glow'
+};
+
+const DEFAULT_CUST = () => ({
+  shipBody: 'fighter', shipColor: '#00d4ff',
+  accentColor: '#ff3b5c', pattern: 'plain', engineColor: '#ffd700'
+});
 
 function initCustomizer() {
   const palette = document.getElementById('block-palette-items');
   palette.innerHTML = '';
 
-  for (const def of BLOCK_DEFS) {
-    const el = document.createElement('div');
-    el.className = `code-block cat-${def.category}`;
-    el.textContent = def.label;
-    el.draggable = true;
-    el.dataset.blockId = def.id;
+  const categories = ['body', 'shipColor', 'accentColor', 'pattern', 'engineColor'];
+  for (const cat of categories) {
+    const defs = BLOCK_DEFS.filter(d => d.category === cat);
+    if (!defs.length) continue;
 
-    el.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/plain', def.id);
-      el.style.opacity = '0.5';
-    });
-    el.addEventListener('dragend', () => { el.style.opacity = '1'; });
+    const header = document.createElement('div');
+    header.className = 'palette-section-header';
+    header.textContent = CATEGORY_LABELS[cat] || cat;
+    palette.appendChild(header);
 
-    // Click to add (mobile-friendly)
-    el.addEventListener('click', () => {
-      addBlockToCode(def.id);
-    });
+    const group = document.createElement('div');
+    group.className = 'palette-section-group';
+    for (const def of defs) {
+      const el = document.createElement('div');
+      el.className = `code-block cat-${def.category}`;
+      el.textContent = def.label;
+      el.draggable = true;
+      el.dataset.blockId = def.id;
 
-    palette.appendChild(el);
+      el.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', def.id);
+        el.style.opacity = '0.5';
+      });
+      el.addEventListener('dragend', () => { el.style.opacity = '1'; });
+      el.addEventListener('click', () => { addBlockToCode(def.id); });
+
+      group.appendChild(el);
+    }
+    palette.appendChild(group);
   }
 
   // Code area drop zone
@@ -346,45 +385,24 @@ function initCustomizer() {
   // Clear button
   document.getElementById('btn-clear-code').addEventListener('click', () => {
     codeAreaBlocks = [];
-    customization = {
-      bodyColor: '#00d4ff',
-      hatType: 'none',
-      hatColor: '#a855f7',
-      shirtColor: '#1e3a5f',
-      shoesColor: '#ff6b35'
-    };
+    customization = DEFAULT_CUST();
     renderCodeArea();
     renderPreview();
   });
-
-  // Weapon list
-  const weaponList = document.getElementById('weapon-list');
-  weaponList.innerHTML = '';
-  for (const [key, w] of Object.entries(WEAPONS)) {
-    if (key === 'golden_wand') continue; // Can't select golden wand
-    const card = document.createElement('div');
-    card.className = `weapon-card${key === selectedWeapon ? ' selected' : ''}`;
-    card.innerHTML = `
-      <div class="weapon-dot" style="background:${w.projectileColor}; box-shadow: 0 0 8px ${w.projectileColor}"></div>
-      <div class="weapon-info">
-        <div class="weapon-name">${w.name}</div>
-        <div class="weapon-desc">${w.description} | Spread: ${w.spread}</div>
-      </div>
-    `;
-    card.addEventListener('click', () => {
-      selectedWeapon = key;
-      document.querySelectorAll('.weapon-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-    });
-    weaponList.appendChild(card);
-  }
 
   // Join battle
   document.getElementById('btn-join-battle').addEventListener('click', () => {
     socket.emit('joinGame', {
       name: playerName,
-      weapon: selectedWeapon,
       customization: customization
+    });
+  });
+
+  // Upgrade buttons
+  document.querySelectorAll('.upgrade-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      socket.emit('applyUpgrade', btn.dataset.type);
     });
   });
 }
@@ -403,13 +421,13 @@ function renderCodeArea() {
   const codeOutput = document.getElementById('code-output');
 
   if (codeAreaBlocks.length === 0) {
-    codeArea.innerHTML = '<div class="code-placeholder">↓ Drag blocks here or click to add ↓</div>';
-    codeOutput.textContent = '// Your code will appear here!\n// Click or drag blocks to customize your hero.';
+    codeArea.innerHTML = '<div class="code-placeholder">↓ Click blocks to add them ↓</div>';
+    codeOutput.textContent = '// Your code will appear here!\n// Click blocks to customize your ship.';
     return;
   }
 
   codeArea.innerHTML = '';
-  let codeText = '// My Hero Customization Code\n\n';
+  let codeText = '// My Ship Customization Code\n\n';
 
   codeAreaBlocks.forEach((def, i) => {
     const el = document.createElement('div');
@@ -418,147 +436,304 @@ function renderCodeArea() {
     el.querySelector('.remove-block').addEventListener('click', (e) => {
       e.stopPropagation();
       codeAreaBlocks.splice(i, 1);
-      // Replay all actions
-      customization = {
-        bodyColor: '#00d4ff', hatType: 'none', hatColor: '#a855f7',
-        shirtColor: '#1e3a5f', shoesColor: '#ff6b35'
-      };
+      customization = DEFAULT_CUST();
       codeAreaBlocks.forEach(b => b.action());
       renderCodeArea();
       renderPreview();
     });
     codeArea.appendChild(el);
-    codeText += `hero.${def.label};\n`;
+    codeText += `ship.${def.label};\n`;
   });
 
-  codeText += '\n// Run your code to see the hero!';
+  codeText += '\n// Launch your ship!';
   codeOutput.textContent = codeText;
 }
 
+function updateUpgradePanel() {
+  const panel = document.getElementById('upgrade-panel');
+  if (!panel) return;
+  document.getElementById('upgrade-points-display').textContent = `Points: ${myUpgradePoints}`;
+  const maxLevels = { damage: 5, fireRate: 5, multiShot: 3, speed: 3 };
+  panel.querySelectorAll('.upgrade-btn').forEach(btn => {
+    const type = btn.dataset.type;
+    const level = myUpgrades[type] || 0;
+    const max = maxLevels[type];
+    btn.disabled = myUpgradePoints < 1 || level >= max;
+    btn.querySelector('span').textContent = `Level ${level}/${max}`;
+  });
+}
+
 // ═══════════════════════════════════════════════
-// CHARACTER PREVIEW
+// SHIP PREVIEW
 // ═══════════════════════════════════════════════
 function renderPreview() {
   const c = document.getElementById('preview-canvas');
-  const ctx = c.getContext('2d');
-  ctx.clearRect(0, 0, c.width, c.height);
-
-  const cx = c.width / 2;
-  const baseY = c.height - 30;
-
-  drawCharacter(ctx, cx, baseY - 80, customization, 2.5, playerName);
+  const pctx = c.getContext('2d');
+  pctx.clearRect(0, 0, c.width, c.height);
+  // Dark bg
+  pctx.fillStyle = '#0a0a1a';
+  pctx.fillRect(0, 0, c.width, c.height);
+  drawSpaceship(pctx, c.width / 2, c.height / 2, customization, 2.5, -Math.PI / 2);
 }
 
-function drawCharacter(ctx, x, y, cust, scale = 1, name = '') {
+// ═══════════════════════════════════════════════
+// SPACESHIP RENDERING
+// ═══════════════════════════════════════════════
+function drawSpaceship(ctx, x, y, cust, scale, aimAngle) {
+  if (scale === undefined) scale = 1;
+  if (aimAngle === undefined) aimAngle = -Math.PI / 2;
   const s = scale;
+  const body = cust.shipBody || 'fighter';
+  const hull = cust.shipColor || '#00d4ff';
+  const accent = cust.accentColor || '#ff3b5c';
+  const pattern = cust.pattern || 'plain';
+  const engColor = cust.engineColor || '#ffd700';
+
   ctx.save();
   ctx.translate(x, y);
+  // Ship is drawn pointing up (-y), rotate so nose faces aimAngle direction
+  ctx.rotate(aimAngle + Math.PI / 2);
 
-  // Shoes
-  ctx.fillStyle = cust.shoesColor;
-  ctx.fillRect(-10 * s, 20 * s, 9 * s, 6 * s);
-  ctx.fillRect(1 * s, 20 * s, 9 * s, 6 * s);
-
-  // Legs
-  ctx.fillStyle = '#3a3a55';
-  ctx.fillRect(-8 * s, 10 * s, 7 * s, 12 * s);
-  ctx.fillRect(1 * s, 10 * s, 7 * s, 12 * s);
-
-  // Body
-  ctx.fillStyle = cust.shirtColor;
-  ctx.fillRect(-11 * s, -6 * s, 22 * s, 18 * s);
-
-  // Arms
-  ctx.fillStyle = cust.bodyColor;
-  ctx.fillRect(-16 * s, -4 * s, 6 * s, 14 * s);
-  ctx.fillRect(10 * s, -4 * s, 6 * s, 14 * s);
-
-  // Head
-  ctx.fillStyle = cust.bodyColor;
-  ctx.beginPath();
-  ctx.arc(0, -16 * s, 11 * s, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Eyes
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.arc(-4 * s, -17 * s, 2.5 * s, 0, Math.PI * 2);
-  ctx.arc(4 * s, -17 * s, 2.5 * s, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#111';
-  ctx.beginPath();
-  ctx.arc(-3.5 * s, -17 * s, 1.4 * s, 0, Math.PI * 2);
-  ctx.arc(4.5 * s, -17 * s, 1.4 * s, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Smile
-  ctx.strokeStyle = '#222';
-  ctx.lineWidth = s;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.arc(0, -14 * s, 4 * s, 0.1, Math.PI - 0.1);
-  ctx.stroke();
-
-  // Hat
-  drawHat(ctx, cust.hatType, cust.hatColor, s);
-
-  // Name tag
-  if (name && s < 2) {
-    ctx.font = 'bold 9px Orbitron';
-    ctx.textAlign = 'center';
-    const tw = ctx.measureText(name).width;
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(-tw / 2 - 4, -33 * s, tw + 8, 12);
-    ctx.fillStyle = '#e8e8f0';
-    ctx.fillText(name, 0, -33 * s + 9);
+  switch (body) {
+    case 'bomber':  drawBomber(ctx, s, hull, accent, pattern, engColor); break;
+    case 'scout':   drawScout(ctx, s, hull, accent, pattern, engColor); break;
+    case 'cruiser': drawCruiser(ctx, s, hull, accent, pattern, engColor); break;
+    default:        drawFighter(ctx, s, hull, accent, pattern, engColor);
   }
 
   ctx.restore();
 }
 
-function drawHat(ctx, type, color, s) {
-  ctx.fillStyle = color;
-  switch (type) {
-    case 'wizard':
-      ctx.beginPath();
-      ctx.moveTo(0, -36 * s);
-      ctx.lineTo(-12 * s, -22 * s);
-      ctx.lineTo(12 * s, -22 * s);
-      ctx.closePath();
-      ctx.fill();
-      // Star on hat
-      ctx.fillStyle = '#ffd700';
-      ctx.beginPath();
-      ctx.arc(0, -28 * s, 2 * s, 0, Math.PI * 2);
-      ctx.fill();
+function drawFighter(ctx, s, hull, accent, pattern, engColor) {
+  // Main hull — narrow elongated wedge pointing up
+  ctx.fillStyle = hull;
+  ctx.beginPath();
+  ctx.moveTo(0, -22 * s);       // nose tip
+  ctx.lineTo(8 * s, -2 * s);   // right mid
+  ctx.lineTo(7 * s, 12 * s);   // right rear
+  ctx.lineTo(0, 9 * s);        // center rear notch
+  ctx.lineTo(-7 * s, 12 * s);  // left rear
+  ctx.lineTo(-8 * s, -2 * s);  // left mid
+  ctx.closePath();
+  ctx.fill();
+
+  // Swept wings
+  ctx.globalAlpha = 0.82;
+  ctx.beginPath(); // left wing
+  ctx.moveTo(-7 * s, 3 * s);
+  ctx.lineTo(-22 * s, 12 * s);
+  ctx.lineTo(-14 * s, 16 * s);
+  ctx.lineTo(-7 * s, 10 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath(); // right wing
+  ctx.moveTo(7 * s, 3 * s);
+  ctx.lineTo(22 * s, 12 * s);
+  ctx.lineTo(14 * s, 16 * s);
+  ctx.lineTo(7 * s, 10 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Center spine highlight
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = s;
+  ctx.beginPath();
+  ctx.moveTo(0, -20 * s);
+  ctx.lineTo(0, 8 * s);
+  ctx.stroke();
+
+  // Cockpit window
+  ctx.fillStyle = 'rgba(150,230,255,0.55)';
+  ctx.beginPath();
+  ctx.ellipse(0, -10 * s, 3 * s, 5 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pattern overlay
+  applyPattern(ctx, s, accent, pattern);
+
+  // Twin engines at rear
+  drawEngines(ctx, s, engColor, [[-4 * s, 12 * s], [4 * s, 12 * s]], 3, 4);
+}
+
+function drawBomber(ctx, s, hull, accent, pattern, engColor) {
+  // Wide rounded heavy hull
+  ctx.fillStyle = hull;
+  ctx.beginPath();
+  ctx.ellipse(0, -2 * s, 15 * s, 20 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Broad wings
+  ctx.globalAlpha = 0.78;
+  ctx.beginPath(); // left
+  ctx.moveTo(-13 * s, -4 * s);
+  ctx.lineTo(-32 * s, 6 * s);
+  ctx.lineTo(-28 * s, 16 * s);
+  ctx.lineTo(-13 * s, 10 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath(); // right
+  ctx.moveTo(13 * s, -4 * s);
+  ctx.lineTo(32 * s, 6 * s);
+  ctx.lineTo(28 * s, 16 * s);
+  ctx.lineTo(13 * s, 10 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Cockpit dome
+  ctx.fillStyle = 'rgba(150,230,255,0.5)';
+  ctx.beginPath();
+  ctx.ellipse(0, -12 * s, 5 * s, 7 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  applyPattern(ctx, s, accent, pattern);
+
+  // 4 engine nozzles
+  drawEngines(ctx, s, engColor, [[-9 * s, 18 * s], [-3 * s, 19 * s], [3 * s, 19 * s], [9 * s, 18 * s]], 3, 4);
+}
+
+function drawScout(ctx, s, hull, accent, pattern, engColor) {
+  // Small sleek oval
+  ctx.fillStyle = hull;
+  ctx.beginPath();
+  ctx.ellipse(0, -2 * s, 7 * s, 17 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Thin swept wings
+  ctx.globalAlpha = 0.75;
+  ctx.beginPath(); // left
+  ctx.moveTo(-5 * s, 4 * s);
+  ctx.lineTo(-20 * s, 9 * s);
+  ctx.lineTo(-15 * s, 15 * s);
+  ctx.lineTo(-5 * s, 10 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath(); // right
+  ctx.moveTo(5 * s, 4 * s);
+  ctx.lineTo(20 * s, 9 * s);
+  ctx.lineTo(15 * s, 15 * s);
+  ctx.lineTo(5 * s, 10 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Sleek cockpit
+  ctx.fillStyle = 'rgba(150,230,255,0.6)';
+  ctx.beginPath();
+  ctx.ellipse(0, -8 * s, 2.5 * s, 5 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  applyPattern(ctx, s, accent, pattern);
+
+  // Single large engine
+  drawEngines(ctx, s, engColor, [[0, 14 * s]], 4, 5);
+}
+
+function drawCruiser(ctx, s, hull, accent, pattern, engColor) {
+  // Hexagonal heavy hull
+  ctx.fillStyle = hull;
+  ctx.beginPath();
+  ctx.moveTo(0, -22 * s);
+  ctx.lineTo(14 * s, -12 * s);
+  ctx.lineTo(17 * s, 4 * s);
+  ctx.lineTo(11 * s, 16 * s);
+  ctx.lineTo(-11 * s, 16 * s);
+  ctx.lineTo(-17 * s, 4 * s);
+  ctx.lineTo(-14 * s, -12 * s);
+  ctx.closePath();
+  ctx.fill();
+
+  // Heavy wing extensions
+  ctx.globalAlpha = 0.68;
+  ctx.beginPath(); // left
+  ctx.moveTo(-17 * s, 0);
+  ctx.lineTo(-33 * s, 10 * s);
+  ctx.lineTo(-28 * s, 18 * s);
+  ctx.lineTo(-13 * s, 14 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath(); // right
+  ctx.moveTo(17 * s, 0);
+  ctx.lineTo(33 * s, 10 * s);
+  ctx.lineTo(28 * s, 18 * s);
+  ctx.lineTo(13 * s, 14 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Armor plate details
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = s;
+  ctx.beginPath();
+  ctx.moveTo(-9 * s, -17 * s); ctx.lineTo(9 * s, -17 * s);
+  ctx.moveTo(-13 * s, -4 * s); ctx.lineTo(13 * s, -4 * s);
+  ctx.stroke();
+
+  // Wide cockpit bridge
+  ctx.fillStyle = 'rgba(150,230,255,0.45)';
+  ctx.beginPath();
+  ctx.ellipse(0, -8 * s, 5 * s, 7 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  applyPattern(ctx, s, accent, pattern);
+
+  // Triple engine bank
+  drawEngines(ctx, s, engColor, [[-8 * s, 17 * s], [0, 19 * s], [8 * s, 17 * s]], 4, 5);
+}
+
+function applyPattern(ctx, s, accent, pattern) {
+  if (pattern === 'plain') return;
+  ctx.fillStyle = accent;
+  ctx.strokeStyle = accent;
+  ctx.globalAlpha = 0.65;
+
+  switch (pattern) {
+    case 'stripes':
+      ctx.fillRect(-1.5 * s, -16 * s, 3 * s, 22 * s);
       break;
-    case 'crown':
+    case 'chevron':
+      ctx.lineWidth = 2.5 * s;
+      ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(-10 * s, -22 * s);
-      ctx.lineTo(-10 * s, -30 * s);
-      ctx.lineTo(-5 * s, -26 * s);
-      ctx.lineTo(0, -32 * s);
-      ctx.lineTo(5 * s, -26 * s);
-      ctx.lineTo(10 * s, -30 * s);
-      ctx.lineTo(10 * s, -22 * s);
-      ctx.closePath();
-      ctx.fill();
+      ctx.moveTo(-9 * s, -5 * s);
+      ctx.lineTo(0, -14 * s);
+      ctx.lineTo(9 * s, -5 * s);
+      ctx.stroke();
       break;
-    case 'cap':
-      ctx.beginPath();
-      ctx.ellipse(0, -23 * s, 12 * s, 5 * s, 0, Math.PI, 0);
-      ctx.fill();
-      ctx.fillRect(-14 * s, -24 * s, 20 * s, 3 * s);
-      break;
-    case 'headband':
-      ctx.fillRect(-11 * s, -20 * s, 22 * s, 3 * s);
-      // Knot
-      ctx.fillRect(11 * s, -22 * s, 5 * s, 2 * s);
-      ctx.fillRect(11 * s, -19 * s, 5 * s, 2 * s);
-      break;
-    default:
+    case 'dots':
+      for (const [dx, dy] of [[-4, -10], [0, -5], [4, -10]]) {
+        ctx.beginPath();
+        ctx.arc(dx * s, dy * s, 2.5 * s, 0, Math.PI * 2);
+        ctx.fill();
+      }
       break;
   }
+  ctx.globalAlpha = 1;
+}
+
+function drawEngines(ctx, s, engColor, positions, rw, rh) {
+  ctx.save();
+  ctx.shadowColor = engColor;
+  ctx.shadowBlur = 10;
+
+  ctx.fillStyle = engColor;
+  for (const [ex, ey] of positions) {
+    ctx.beginPath();
+    ctx.ellipse(ex, ey, rw * s, rh * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Bright white core
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  for (const [ex, ey] of positions) {
+    ctx.beginPath();
+    ctx.ellipse(ex, ey, rw * 0.45 * s, rh * 0.5 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
 }
 
 // ═══════════════════════════════════════════════
@@ -587,27 +762,19 @@ function gameLoop(timestamp) {
   if (currentScreen !== 'game') return;
 
   frameDt = timestamp - lastFrameTime;
-  const dt = frameDt;
   lastFrameTime = timestamp;
 
   frameCount++;
-  fpsTimer += dt;
+  fpsTimer += frameDt;
   if (fpsTimer >= 1000) {
     fps = frameCount;
     frameCount = 0;
     fpsTimer = 0;
   }
 
-  // Send input
   sendInput();
-
-  // Render
   render();
-
-  // Update local particles
   updateLocalParticles();
-
-  // Update HUD
   updateHUD();
 
   requestAnimationFrame(gameLoop);
@@ -619,10 +786,10 @@ function sendInput() {
   const mx = (mouseX - canvasRect.left) / scaleX;
   const my = (mouseY - canvasRect.top) / scaleY;
 
-  // Use predicted position for aim angle so crosshair feels accurate immediately
   const aimBaseX = hasPrediction ? predictX : (gs?.players?.[myId]?.x ?? 0);
   const aimBaseY = hasPrediction ? predictY : (gs?.players?.[myId]?.y ?? 0);
   const aimAngle = Math.atan2(my - aimBaseY, mx - aimBaseX);
+  lastAimAngle = aimAngle;
 
   socket.volatile.emit('input', {
     w: keys.w, a: keys.a, s: keys.s, d: keys.d,
@@ -630,13 +797,15 @@ function sendInput() {
     aimAngle
   });
 
-  // Client-side prediction: apply movement locally so it feels instant
+  // Client-side prediction: time-based, frame-rate independent
   if (hasPrediction && gs?.players?.[myId]?.alive) {
     let dx = 0, dy = 0;
     if (keys.w) dy -= 1; if (keys.s) dy += 1;
     if (keys.a) dx -= 1; if (keys.d) dx += 1;
     if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
-    const spd = CONFIG.PLAYER_SPEED || 6;
+    const tickMs = 1000 / (CONFIG.TICK_RATE || 20);
+    const dt = Math.min(frameDt, 100) / tickMs;
+    const spd = (CONFIG.PLAYER_SPEED || 4) * dt;
     predictX = Math.max(CONFIG.PLAYER_RADIUS, Math.min(CONFIG.ARENA_W - CONFIG.PLAYER_RADIUS, predictX + dx * spd));
     predictY = Math.max(CONFIG.PLAYER_RADIUS, Math.min(CONFIG.ARENA_H - CONFIG.PLAYER_RADIUS, predictY + dy * spd));
   }
@@ -678,7 +847,6 @@ function render() {
 
   drawBackground();
 
-  // Screen shake decay
   shakeX = (Math.random() - 0.5) * shakeMag * 2;
   shakeY = (Math.random() - 0.5) * shakeMag * 2;
   shakeMag *= 0.82;
@@ -688,11 +856,9 @@ function render() {
   ctx.scale(scaleX, scaleY);
 
   if (gs) {
-    // Frame-rate-independent smooth factor (~0.25 at 60 fps)
-    const SMOOTH = 1 - Math.pow(0.75, frameDt / 16.67);
+    const SMOOTH = 1 - Math.pow(0.5, frameDt / 16.67);
 
-    // ── Advance smooth-follower positions ────────────────────
-    // Pawns
+    // Advance smooth-follower positions
     const livePawnIds = new Set();
     for (const pawn of gs.pawns) {
       livePawnIds.add(pawn.id);
@@ -705,7 +871,6 @@ function render() {
       if (!livePawnIds.has(Number(id))) delete displayPos.pawns[id];
     }
 
-    // Boss
     if (gs.boss) {
       if (!displayPos.boss) { displayPos.boss = { x: gs.boss.x, y: gs.boss.y }; }
       else {
@@ -714,7 +879,6 @@ function render() {
       }
     } else { displayPos.boss = null; }
 
-    // Other players
     const livePlayerIds = new Set(Object.keys(gs.players));
     for (const [id, p] of Object.entries(gs.players)) {
       if (id === myId) continue;
@@ -727,7 +891,9 @@ function render() {
       if (!livePlayerIds.has(id)) delete displayPos.players[id];
     }
 
-    // ── Draw arena ───────────────────────────────────────────
+    const now = performance.now();
+
+    // Arena border & grid
     ctx.strokeStyle = 'rgba(0,212,255,0.15)';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, gameW, gameH);
@@ -740,7 +906,7 @@ function render() {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(gameW, y); ctx.stroke();
     }
 
-    // ── Draw entities using smooth positions ─────────────────
+    // Entities
     for (const pawn of gs.pawns) {
       const dp = displayPos.pawns[pawn.id] || pawn;
       drawPawn(pawn, dp.x, dp.y);
@@ -751,7 +917,6 @@ function render() {
       drawBoss(gs.boss, db.x, db.y);
     }
 
-    const now = performance.now();
     for (const proj of gs.projectiles) {
       drawProjectile(proj, now);
     }
@@ -789,53 +954,50 @@ function render() {
 }
 
 function drawBackground() {
-  // Dark gradient
   const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  grad.addColorStop(0, '#080818');
-  grad.addColorStop(0.5, '#0e0e24');
-  grad.addColorStop(1, '#0a0a1a');
+  grad.addColorStop(0, '#060616');
+  grad.addColorStop(0.5, '#0b0b20');
+  grad.addColorStop(1, '#080818');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Stars
   const time = Date.now() * 0.001;
   for (const star of stars) {
-    const alpha = 0.3 + 0.3 * Math.sin(time + star.a * 10);
-    ctx.fillStyle = `rgba(200,200,255,${alpha})`;
+    const alpha = 0.25 + 0.3 * Math.sin(time + star.a * 10);
+    ctx.fillStyle = `rgba(200,210,255,${alpha})`;
     ctx.fillRect(star.x * scaleX, star.y * scaleY, star.s, star.s);
   }
 }
 
 function drawPlayer(p, x, y, isMe) {
   const cust = p.customization || customization;
-  drawCharacter(ctx, x, y, cust, 1, p.name);
+  // aimAngle: use lastAimAngle for local player, server-broadcast for others
+  const aimAngle = isMe ? lastAimAngle : (p.aimAngle || 0);
+  drawSpaceship(ctx, x, y, cust, 1, aimAngle);
 
-  // HP bar
+  // HP bar + name drawn at fixed coords (not rotated with ship)
   if (p.alive) {
-    const bw = 30, bh = 4;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(x - bw / 2, y - 32, bw, bh);
+    const bw = 38, bh = 5;
+    const barY = y - 36;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(x - bw / 2, barY, bw, bh);
     const hpPct = Math.max(0, p.hp / (p.maxHP || 100));
     ctx.fillStyle = hpPct > 0.5 ? '#00ff88' : hpPct > 0.25 ? '#ffd700' : '#ff3b5c';
-    ctx.fillRect(x - bw / 2, y - 32, bw * hpPct, bh);
+    ctx.fillRect(x - bw / 2, barY, bw * hpPct, bh);
+
+    ctx.font = 'bold 8px Orbitron';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = isMe ? '#00d4ff' : '#e8e8f0';
+    ctx.fillText(p.name, x, barY - 3);
   }
 
-  // Golden gun indicator
-  if (p.hasGoldenGun) {
-    ctx.strokeStyle = '#ffd700';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, 22, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  // "You" indicator
+  // "You" arrow indicator
   if (isMe && p.alive) {
     ctx.fillStyle = '#00d4ff';
     ctx.beginPath();
-    ctx.moveTo(x, y - 40);
-    ctx.lineTo(x - 4, y - 46);
-    ctx.lineTo(x + 4, y - 46);
+    ctx.moveTo(x, y - 46);
+    ctx.lineTo(x - 4, y - 52);
+    ctx.lineTo(x + 4, y - 52);
     ctx.closePath();
     ctx.fill();
   }
@@ -845,7 +1007,6 @@ function drawPawn(pawn, x, y) {
   ctx.save();
   ctx.translate(x, y);
 
-  // Body — no shadowBlur (expensive, removed for perf)
   ctx.fillStyle = '#2a1a3a';
   ctx.strokeStyle = '#ff6b35';
   ctx.lineWidth = 2;
@@ -854,27 +1015,17 @@ function drawPawn(pawn, x, y) {
   ctx.fill();
   ctx.stroke();
 
-  // Symbol based on type (use pawn.id for stable symbol)
   ctx.fillStyle = '#ff6b35';
   ctx.font = `bold ${pawn.radius}px Orbitron`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   switch (pawn.type) {
-    case 'number':
-      ctx.fillText(String(pawn.id % 10), 0, 1);
-      break;
-    case 'operator':
-      ctx.fillText(['+', '−', '×', '÷'][pawn.id % 4], 0, 1);
-      break;
-    case 'bracket':
-      ctx.fillText(['(', ')'][pawn.id % 2], 0, 1);
-      break;
-    case 'binary':
-      ctx.fillText(['0', '1'][pawn.id % 2], 0, 1);
-      break;
+    case 'number':   ctx.fillText(String(pawn.id % 10), 0, 1); break;
+    case 'operator': ctx.fillText(['+', '−', '×', '÷'][pawn.id % 4], 0, 1); break;
+    case 'bracket':  ctx.fillText(['(', ')'][pawn.id % 2], 0, 1); break;
+    case 'binary':   ctx.fillText(['0', '1'][pawn.id % 2], 0, 1); break;
   }
 
-  // HP bar
   const hpPct = pawn.hp / pawn.maxHP;
   if (hpPct < 1) {
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -893,7 +1044,6 @@ function drawBoss(boss, x, y) {
   const time = Date.now() * 0.002;
   const r = boss.radius;
 
-  // Shield
   if (boss.shieldActive) {
     ctx.strokeStyle = 'rgba(0,212,255,0.6)';
     ctx.lineWidth = 3;
@@ -904,33 +1054,27 @@ function drawBoss(boss, x, y) {
     ctx.setLineDash([]);
   }
 
-  // Glow
   ctx.shadowColor = '#ff0080';
   ctx.shadowBlur = 30;
 
-  // Main body - PI SYMBOL
   ctx.fillStyle = '#1a0a2a';
   ctx.strokeStyle = '#ff0080';
   ctx.lineWidth = 4;
 
-  // Draw Pi shape
   const piScale = r / 40;
 
-  // Top bar of Pi
   ctx.beginPath();
   ctx.moveTo(-30 * piScale, -25 * piScale);
   ctx.lineTo(30 * piScale, -25 * piScale);
   ctx.lineWidth = 8 * piScale;
   ctx.stroke();
 
-  // Left leg
   ctx.lineWidth = 6 * piScale;
   ctx.beginPath();
   ctx.moveTo(-15 * piScale, -25 * piScale);
   ctx.lineTo(-15 * piScale, 25 * piScale);
   ctx.stroke();
 
-  // Right leg (curved)
   ctx.beginPath();
   ctx.moveTo(15 * piScale, -25 * piScale);
   ctx.quadraticCurveTo(15 * piScale, 15 * piScale, 8 * piScale, 25 * piScale);
@@ -938,28 +1082,23 @@ function drawBoss(boss, x, y) {
 
   ctx.shadowBlur = 0;
 
-  // Face on Pi
   ctx.fillStyle = '#ff0080';
-  // Eyes
   ctx.beginPath();
   ctx.arc(-8 * piScale, -10 * piScale, 4 * piScale, 0, Math.PI * 2);
   ctx.arc(8 * piScale, -10 * piScale, 4 * piScale, 0, Math.PI * 2);
   ctx.fill();
-  // Angry eyebrows
+
   ctx.strokeStyle = '#ff0080';
   ctx.lineWidth = 2 * piScale;
   ctx.beginPath();
-  ctx.moveTo(-14 * piScale, -18 * piScale);
-  ctx.lineTo(-4 * piScale, -15 * piScale);
-  ctx.moveTo(14 * piScale, -18 * piScale);
-  ctx.lineTo(4 * piScale, -15 * piScale);
+  ctx.moveTo(-14 * piScale, -18 * piScale); ctx.lineTo(-4 * piScale, -15 * piScale);
+  ctx.moveTo(14 * piScale, -18 * piScale);  ctx.lineTo(4 * piScale, -15 * piScale);
   ctx.stroke();
-  // Evil grin
+
   ctx.beginPath();
   ctx.arc(0, 0, 8 * piScale, 0.2, Math.PI - 0.2);
   ctx.stroke();
 
-  // Floating pi digits
   ctx.fillStyle = 'rgba(255,0,128,0.3)';
   ctx.font = `${10 * piScale}px Fira Code`;
   ctx.textAlign = 'center';
@@ -971,7 +1110,6 @@ function drawBoss(boss, x, y) {
     ctx.fillText(digits[i], dx, dy);
   }
 
-  // HP bar below boss (only if not full)
   const hpPct = boss.hp / boss.maxHP;
   if (hpPct < 1) {
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -984,39 +1122,39 @@ function drawBoss(boss, x, y) {
 }
 
 function drawProjectile(proj, now) {
-  // Extrapolate position between server ticks using velocity
-  const dt = now !== undefined ? (now - lastStateTime) / (1000 / 60) : 0;
+  // Galactic laser bolt — elongated ellipse rotated along velocity
+  const tickMs = 1000 / (CONFIG.TICK_RATE || 20);
+  const dt = now !== undefined ? Math.min((now - lastStateTime) / tickMs, 1.5) : 0;
   const ex = proj.x + (proj.vx || 0) * dt;
   const ey = proj.y + (proj.vy || 0) * dt;
   const isBoss = proj.owner === 'boss';
-  const spd = Math.hypot(proj.vx || 0, proj.vy || 0) || 1;
-  const trailLen = isBoss ? 28 : 20;
+  const angle = Math.atan2(proj.vy || 0, proj.vx || 0);
+
+  const boltW = isBoss ? 5 : 3;
+  const boltH = isBoss ? 18 : 12;
 
   ctx.save();
+  ctx.translate(ex, ey);
+  ctx.rotate(angle + Math.PI / 2); // orient along velocity
 
-  // Glowing trail behind the bullet
-  const tx = ex - (proj.vx || 0) / spd * trailLen;
-  const ty = ey - (proj.vy || 0) / spd * trailLen;
-  ctx.lineCap = 'round';
-  ctx.lineWidth = isBoss ? 4 : 3;
-  ctx.strokeStyle = proj.color;
-  ctx.globalAlpha = 0.35;
+  // Outer glow
   ctx.shadowColor = proj.color;
-  ctx.shadowBlur = 6;
-  ctx.beginPath();
-  ctx.moveTo(tx, ty);
-  ctx.lineTo(ex, ey);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
+  ctx.shadowBlur = isBoss ? 14 : 8;
 
-  // Bullet head
+  // Main bolt body
   ctx.fillStyle = proj.color;
-  ctx.shadowColor = proj.color;
-  ctx.shadowBlur = 12;
   ctx.beginPath();
-  ctx.arc(ex, ey, isBoss ? 5 : 4, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, boltW, boltH, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  // Bright inner core
   ctx.shadowBlur = 0;
+  ctx.fillStyle = isBoss ? '#ffaacc' : '#ffffff';
+  ctx.globalAlpha = 0.85;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, boltW * 0.45, boltH * 0.55, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
 
   ctx.restore();
 }
@@ -1026,7 +1164,7 @@ function updateLocalParticles() {
     const p = localParticles[i];
     p.x += p.vx;
     p.y += p.vy;
-    p.vy += 0.1; // gravity
+    p.vy += 0.1;
     p.life--;
     if (p.life <= 0) localParticles.splice(i, 1);
   }
@@ -1040,32 +1178,30 @@ function updateHUD() {
 
   const me = gs.players[myId];
   if (me) {
-    // HP
     const hpPct = Math.max(0, me.hp / me.maxHP) * 100;
     document.getElementById('hp-fill').style.width = hpPct + '%';
     document.getElementById('hp-text').textContent = Math.max(0, Math.ceil(me.hp));
 
-    // Weapon
-    const wName = WEAPONS[me.weapon]?.name || me.weapon;
-    document.getElementById('hud-weapon').textContent = wName;
-    document.getElementById('hud-weapon').style.color = WEAPONS[me.weapon]?.projectileColor || '#a855f7';
-
-    // Damage
     document.getElementById('hud-damage-value').textContent = Math.floor(me.totalDamage);
 
-    // Streak
     const streakEl = document.getElementById('hud-streak');
     if (me.triviaStreak > 0) {
       streakEl.textContent = `🔥 Streak: ${me.triviaStreak}`;
     } else {
       streakEl.textContent = '';
     }
+
+    // Show upgrade points in HUD
+    const upEl = document.getElementById('hud-upgrades');
+    if (me.upgradePoints > 0) {
+      upEl.textContent = `⚡ ${me.upgradePoints} pts`;
+    } else {
+      upEl.textContent = '';
+    }
   }
 
-  // Wave
   document.getElementById('hud-wave').textContent = `Wave ${gs.wave}`;
 
-  // Timer
   if (gs.elapsedTime) {
     const secs = Math.floor(gs.elapsedTime / 1000);
     const m = Math.floor(secs / 60);
@@ -1073,7 +1209,6 @@ function updateHUD() {
     document.getElementById('hud-timer').textContent = `${m}:${s.toString().padStart(2, '0')}`;
   }
 
-  // Wave announcement
   const announceEl = document.getElementById('wave-announce');
   if (gs.waveMessage) {
     announceEl.textContent = gs.waveMessage;
@@ -1082,21 +1217,20 @@ function updateHUD() {
     announceEl.classList.add('hidden');
   }
 
-  // Boss HP
   const bossBar = document.getElementById('boss-hp-bar');
   if (gs.boss) {
     bossBar.classList.remove('hidden');
     const pct = Math.max(0, gs.boss.hp / gs.boss.maxHP) * 100;
     document.getElementById('boss-hp-fill').style.width = pct + '%';
     document.getElementById('boss-hp-text').textContent = `${Math.ceil(gs.boss.hp)} / ${gs.boss.maxHP}`;
-    document.getElementById('boss-hp-bar').querySelector('.boss-hp-label').textContent =
+    bossBar.querySelector('.boss-hp-label').textContent =
       gs.boss.isMini ? '🥧 MINI PI' : '👑 THE MIGHTY PI';
   } else {
     bossBar.classList.add('hidden');
   }
 
-  // Leaderboard
-  if (showLeaderboard && gs.leaderboard) {
+  // Leaderboard — always update (always visible)
+  if (gs.leaderboard) {
     const lbList = document.getElementById('leaderboard-list');
     lbList.innerHTML = '';
     gs.leaderboard.forEach((entry, i) => {
@@ -1112,7 +1246,6 @@ function updateHUD() {
     });
   }
 
-  // Admin info
   if (isAdmin) {
     document.getElementById('admin-player-count').textContent =
       `Players: ${Object.keys(gs.players).length}`;
@@ -1157,14 +1290,12 @@ function handleTriviaAnswer(choiceIndex, trivia) {
   const isCorrect = choiceIndex === trivia.answer;
   const buttons = document.querySelectorAll('.trivia-choice');
 
-  // Disable all buttons
   buttons.forEach((btn, i) => {
     btn.style.pointerEvents = 'none';
     if (i === trivia.answer) btn.classList.add('correct');
     if (i === choiceIndex && !isCorrect) btn.classList.add('incorrect');
   });
 
-  // Show feedback
   const feedbackEl = document.getElementById('trivia-feedback');
   feedbackEl.classList.remove('hidden', 'correct-fb', 'incorrect-fb');
 
@@ -1176,12 +1307,8 @@ function handleTriviaAnswer(choiceIndex, trivia) {
     feedbackEl.textContent = `❌ ${trivia.explanation}`;
   }
 
-  // Send answer to server after brief delay
   setTimeout(() => {
     socket.emit('triviaAnswer', { correct: isCorrect });
-    if (!isCorrect) {
-      // Server will send a new question via playerDied
-    }
   }, isCorrect ? 1200 : 2500);
 }
 
@@ -1198,7 +1325,7 @@ function showEndScreen(data) {
   const isVictory = data.phase === 'victory';
   document.getElementById('end-title').textContent = isVictory ? '🎉 Victory! 🎉' : '🏁 Game Over! 🏁';
   document.getElementById('end-subtitle').textContent = isVictory
-    ? 'Pi has been defeated! Great job, heroes!'
+    ? 'Pi has been defeated! Great job, pilots!'
     : 'The battle is over! Here are the results:';
 
   const lb = data.leaderboard || [];
@@ -1217,7 +1344,6 @@ function showEndScreen(data) {
     listEl.appendChild(row);
   });
 
-  // Stats
   const totalDmg = lb.reduce((s, e) => s + e.damage, 0);
   document.getElementById('end-total-damage').textContent = Math.floor(totalDmg);
   document.getElementById('end-players').textContent = lb.length;
@@ -1229,7 +1355,6 @@ function showEndScreen(data) {
     document.getElementById('end-time').textContent = `${m}:${s.toString().padStart(2, '0')}`;
   }
 
-  // Confetti!
   if (isVictory) spawnConfetti();
 }
 
@@ -1243,9 +1368,7 @@ function spawnConfetti() {
     piece.style.animationDuration = (2 + Math.random() * 3) + 's';
     piece.style.animationDelay = Math.random() * 2 + 's';
     piece.style.transform = `rotate(${Math.random() * 360}deg)`;
-    if (Math.random() > 0.5) {
-      piece.style.borderRadius = '50%';
-    }
+    if (Math.random() > 0.5) piece.style.borderRadius = '50%';
     document.body.appendChild(piece);
     setTimeout(() => piece.remove(), 6000);
   }
@@ -1263,7 +1386,7 @@ function showWaveAnnouncement(msg) {
   el.textContent = msg;
   el.classList.remove('hidden');
   el.style.animation = 'none';
-  el.offsetHeight; // reflow
+  el.offsetHeight;
   el.style.animation = '';
 }
 
@@ -1272,22 +1395,17 @@ function showWaveAnnouncement(msg) {
 // ═══════════════════════════════════════════════
 document.addEventListener('keydown', (e) => {
   const key = e.key.toLowerCase();
-  if (key === 'w' || key === 'arrowup') keys.w = true;
-  if (key === 'a' || key === 'arrowleft') keys.a = true;
-  if (key === 's' || key === 'arrowdown') keys.s = true;
+  if (key === 'w' || key === 'arrowup')    keys.w = true;
+  if (key === 'a' || key === 'arrowleft')  keys.a = true;
+  if (key === 's' || key === 'arrowdown')  keys.s = true;
   if (key === 'd' || key === 'arrowright') keys.d = true;
-  if (key === 'tab') {
-    e.preventDefault();
-    showLeaderboard = !showLeaderboard;
-    document.getElementById('leaderboard-sidebar').classList.toggle('hidden', !showLeaderboard);
-  }
 });
 
 document.addEventListener('keyup', (e) => {
   const key = e.key.toLowerCase();
-  if (key === 'w' || key === 'arrowup') keys.w = false;
-  if (key === 'a' || key === 'arrowleft') keys.a = false;
-  if (key === 's' || key === 'arrowdown') keys.s = false;
+  if (key === 'w' || key === 'arrowup')    keys.w = false;
+  if (key === 'a' || key === 'arrowleft')  keys.a = false;
+  if (key === 's' || key === 'arrowdown')  keys.s = false;
   if (key === 'd' || key === 'arrowright') keys.d = false;
 });
 
@@ -1297,24 +1415,15 @@ document.addEventListener('mousemove', (e) => {
 });
 
 document.addEventListener('mousedown', (e) => {
-  if (e.button === 0 && currentScreen === 'game') {
-    mouseDown = true;
-  }
+  if (e.button === 0 && currentScreen === 'game') mouseDown = true;
 });
 
 document.addEventListener('mouseup', (e) => {
   if (e.button === 0) mouseDown = false;
 });
 
-// Prevent context menu in game
 document.addEventListener('contextmenu', (e) => {
   if (currentScreen === 'game') e.preventDefault();
-});
-
-// Leaderboard button
-document.getElementById('btn-show-leaderboard').addEventListener('click', () => {
-  showLeaderboard = !showLeaderboard;
-  document.getElementById('leaderboard-sidebar').classList.toggle('hidden', !showLeaderboard);
 });
 
 // ═══════════════════════════════════════════════
@@ -1329,5 +1438,5 @@ function escHtml(str) {
 // ═══════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════
-console.log('%c🥧 Pi Battle Arena v1.0', 'font-size:20px; color:#00d4ff; font-weight:bold;');
-console.log('%cEdVenture Pi Day 2026 — Made by Ty Bennett', 'font-size:12px; color:#9090b0;');
+console.log('%c🥧 Pi Battle Arena v2.0', 'font-size:20px; color:#00d4ff; font-weight:bold;');
+console.log('%cEdVenture Pi Day 2026 — Spaceships Edition', 'font-size:12px; color:#9090b0;');
