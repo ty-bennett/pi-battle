@@ -162,6 +162,11 @@ socket.on('gameState', (state) => {
     // Sync upgrade data from state
     if (me.upgradePoints !== undefined) myUpgradePoints = me.upgradePoints;
     if (me.upgrades) myUpgrades = me.upgrades;
+    // Refresh panel in case it opened before points arrived
+    const upgradePanel = document.getElementById('upgrade-panel');
+    if (upgradePanel && !upgradePanel.classList.contains('hidden')) {
+      updateUpgradePanel();
+    }
   }
 
   if (state.phase === 'playing') {

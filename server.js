@@ -314,7 +314,7 @@ function gameTick() {
         }
       }
       gameState.projectiles = []; // clear lingering bullets so they don't glitch frozen
-      betweenWaveTimer = CONFIG.TICK_RATE * 5; // 5 second break (extra time for upgrades)
+      betweenWaveTimer = CONFIG.TICK_RATE * 20; // 20 second break for kids to choose upgrades
       gameState.waveMessage = `✅ Wave ${gameState.wave + 1} Complete! Choose an upgrade!`;
       gameState.waveMessageTimer = CONFIG.TICK_RATE * 3;
     }
