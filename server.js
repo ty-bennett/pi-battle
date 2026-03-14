@@ -38,14 +38,14 @@ const CONFIG = {
   PLAYER_SPEED: 4,
   PLAYER_HP: 100,
   PLAYER_RADIUS: 18,
-  BOSS_BASE_HP: 5000,
-  BOSS_HP_PER_PLAYER: 1500,
-  WAVE_COUNT: 7,
+  BOSS_BASE_HP: 1500,
+  BOSS_HP_PER_PLAYER: 400,
+  WAVE_COUNT: 3,
   PAWN_HP: 60,
   PAWN_SPEED: 1.5,
   PAWN_RADIUS: 14,
-  PAWN_DAMAGE: 8,
-  BOSS_DAMAGE: 15,
+  PAWN_DAMAGE: 5,
+  BOSS_DAMAGE: 10,
   PROJECTILE_SPEED: 15,
   PROJECTILE_LIFETIME: 80,  // frames
   GOLDEN_GUN_CHANCE: 1 / 50,
@@ -55,38 +55,27 @@ const CONFIG = {
 
 // ─── TRIVIA BANK ────────────────────────────────────────────
 const TRIVIA = [
-  // Quick math
-  { q: "What is 8 × 7?", choices: ["54", "56", "63", "64"], answer: 1, explanation: "8 × 7 = 56. Tip: 8×7 = (8×5) + (8×2) = 40 + 16 = 56!" },
-  { q: "What is 4 × 4?", choices: ["12", "16", "18", "20"], answer: 1, explanation: "4 × 4 = 16. It's a perfect square — 4 rows of 4!" },
-  { q: "What is 100 − 25?", choices: ["65", "70", "75", "80"], answer: 2, explanation: "100 − 25 = 75. A quarter of 100 is 25, so three quarters is 75!" },
-  { q: "What is 6 × 6?", choices: ["30", "36", "42", "48"], answer: 1, explanation: "6 × 6 = 36. Six sixes are thirty-six!" },
-  { q: "What is 3 × 9?", choices: ["24", "27", "30", "33"], answer: 1, explanation: "3 × 9 = 27. Tip: 9 × anything — the digits always add up to 9 (2+7=9)!" },
-  { q: "What is 50 + 50?", choices: ["90", "95", "100", "110"], answer: 2, explanation: "50 + 50 = 100. Two halves make a whole!" },
-  { q: "What is 12 × 3?", choices: ["30", "33", "36", "39"], answer: 2, explanation: "12 × 3 = 36. Try: 10×3=30, plus 2×3=6, total 36!" },
+  // Simple math
+  { q: "What is 5 + 3?", choices: ["6", "7", "8", "9"], answer: 2, explanation: "5 + 3 = 8. Count up from 5: 6, 7, 8!" },
+  { q: "What is 10 − 4?", choices: ["4", "5", "6", "7"], answer: 2, explanation: "10 − 4 = 6. Count back from 10: 9, 8, 7, 6!" },
+  { q: "What is 7 + 6?", choices: ["11", "12", "13", "14"], answer: 2, explanation: "7 + 6 = 13. Try: 7 + 3 = 10, then add 3 more = 13!" },
+  { q: "What is 15 − 7?", choices: ["6", "7", "8", "9"], answer: 2, explanation: "15 − 7 = 8. Think: 7 + ? = 15. Count up 7 steps from 7 to get 8!" },
+  { q: "What is 9 + 9?", choices: ["16", "17", "18", "19"], answer: 2, explanation: "9 + 9 = 18. Double 9! Or: 10 + 10 = 20, minus 2 = 18." },
+  { q: "What is 20 − 5?", choices: ["13", "14", "15", "16"], answer: 2, explanation: "20 − 5 = 15. Count back 5 steps from 20!" },
+  { q: "What is 4 + 8?", choices: ["10", "11", "12", "13"], answer: 2, explanation: "4 + 8 = 12. Flip it: 8 + 4. Start at 8, count up 4: 9, 10, 11, 12!" },
+  { q: "What is 30 − 12?", choices: ["16", "17", "18", "19"], answer: 2, explanation: "30 − 12 = 18. Try: 30 − 10 = 20, then 20 − 2 = 18!" },
+  { q: "What is 6 + 7?", choices: ["11", "12", "13", "14"], answer: 2, explanation: "6 + 7 = 13. Remember: 6 + 6 = 12, so 6 + 7 is one more = 13!" },
   { q: "What are the first 3 digits of Pi?", choices: ["3.14", "3.41", "2.71", "3.15"], answer: 0, explanation: "Pi = 3.14159... It goes on forever and never repeats — that's what makes it special!" },
-  { q: "What is 2 to the power of 3?", choices: ["6", "8", "9", "16"], answer: 1, explanation: "2³ = 2×2×2 = 8. Computers double things like this all the time!" },
-  { q: "What is 5 × 5 × 2?", choices: ["25", "40", "50", "60"], answer: 2, explanation: "5×5=25, then 25×2=50. Breaking it into steps is how computers think!" },
-  // Coding fundamentals
-  { q: "In coding, what is a 'variable'?", choices: ["A type of loop", "A named container for storing data", "A kind of bug", "A programming language"], answer: 1, explanation: "A variable stores data! In this game, 'hp' is a variable that holds your health points." },
-  { q: "What does a loop do in programming?", choices: ["Crashes the program", "Repeats a block of code", "Deletes data", "Connects to the internet"], answer: 1, explanation: "A loop repeats code! This game runs a loop 20 times per second to update every ship and bullet." },
-  { q: "What is a 'function' in code?", choices: ["A math equation only", "A bug in the program", "A named block of reusable code", "A type of computer"], answer: 2, explanation: "Functions are reusable actions! This game has functions like movePlayer() and shootBullet()." },
-  { q: "What does 'if' do in programming?", choices: ["Repeats code forever", "Checks a condition and decides what to do", "Stores a number", "Prints text to screen"], answer: 1, explanation: "If-statements make decisions! Like: if (bullet hits enemy) { damage them }." },
-  { q: "What is a 'bug' in programming?", choices: ["An insect in the computer", "A fast piece of code", "An error or mistake in code", "Extra memory"], answer: 2, explanation: "A bug is a mistake in code! The term came from an actual moth found inside an early computer in 1947." },
-  { q: "What language was this game built with?", choices: ["Python", "Java", "Scratch", "JavaScript"], answer: 3, explanation: "Pi Battle Arena runs on JavaScript! It's the language that makes websites and games interactive." },
-  { q: "What does HTML stand for?", choices: ["HyperText Makeup Language", "HyperText Markup Language", "HighTech Modern Language", "How To Make Links"], answer: 1, explanation: "HTML = HyperText Markup Language. It's the skeleton of every web page!" },
-  { q: "What does CSS do on a website?", choices: ["Connects to databases", "Controls styling and appearance", "Runs the game logic", "Handles user logins"], answer: 1, explanation: "CSS controls how things look — colors, fonts, layouts. It's what makes a website beautiful!" },
-  { q: "What does CPU stand for?", choices: ["Computer Power Unit", "Central Processing Unit", "Core Program Utility", "Central Power Updater"], answer: 1, explanation: "CPU = Central Processing Unit — the brain of a computer that runs all your code!" },
-  { q: "How many bits are in one byte?", choices: ["2", "4", "8", "16"], answer: 2, explanation: "1 byte = 8 bits. A bit is the tiniest piece of data: just a 0 or 1. 8 bits can store 256 different values!" },
-  { q: "In binary, what does '1 + 1' equal?", choices: ["2", "11", "10", "0"], answer: 2, explanation: "In binary, 1 + 1 = 10 (which means 2). Computers only use 0s and 1s to do ALL math!" },
-  { q: "What does RAM stand for?", choices: ["Random Access Memory", "Run All Machines", "Read Any Media", "Really Awesome Memory"], answer: 0, explanation: "RAM = Random Access Memory — your computer's short-term workspace while programs run!" },
-  { q: "What is an algorithm?", choices: ["A type of computer chip", "A programming language", "A step-by-step recipe for solving a problem", "A kind of variable"], answer: 2, explanation: "An algorithm is a step-by-step plan! The AI in this game uses algorithms to aim at players." },
-  { q: "What is 'debugging'?", choices: ["Adding new features", "Finding and fixing errors in code", "Deleting old code", "Running a program faster"], answer: 1, explanation: "Debugging = finding and fixing bugs! Professional coders spend a lot of time debugging." },
-  { q: "What is a server?", choices: ["A waiter at a restaurant", "A computer that delivers data to other computers", "A type of keyboard", "A programming language"], answer: 1, explanation: "A server is a computer that shares resources! Right now, a server is running this entire game." },
-  { q: "What does '==' mean in most programming languages?", choices: ["Set a variable", "Multiply two numbers", "Check if two values are equal", "Print to the screen"], answer: 2, explanation: "== checks equality! In this game: if (hp == 0) means 'if health equals zero, the player is dead.'" },
-  { q: "What is a 'boolean'?", choices: ["A type of loop", "A value that is either true or false", "A big number", "A color in CSS"], answer: 1, explanation: "A boolean is true or false — like a light switch! In this game, 'alive' is a boolean: true or false." },
-  { q: "What does the internet use to send data?", choices: ["Fax machines", "Packets", "USB cables only", "Telephone calls"], answer: 1, explanation: "The internet breaks data into small pieces called packets that travel separately and reassemble!" },
-  { q: "What does 'open source' mean?", choices: ["The code is secret", "Anyone can view and contribute to the code", "The program is free forever", "The computer is always on"], answer: 1, explanation: "Open source means the code is public! Many famous tools like Linux, Python, and VS Code are open source." },
-  { q: "What is a pixel?", choices: ["A type of coding error", "A unit of memory", "The smallest dot of color on a screen", "A network connection"], answer: 2, explanation: "A pixel is a tiny square of color. Your screen has millions of them — this whole game is made of pixels!" },
+  { q: "What is 3 + 4?", choices: ["5", "6", "7", "8"], answer: 2, explanation: "3 + 4 = 7. Count up 4 from 3: 4, 5, 6, 7!" },
+  { q: "What is 8 − 3?", choices: ["3", "4", "5", "6"], answer: 2, explanation: "8 − 3 = 5. Count back 3 from 8: 7, 6, 5!" },
+  { q: "What is 2 + 2?", choices: ["2", "3", "4", "5"], answer: 2, explanation: "2 + 2 = 4. Two pairs make four!" },
+  { q: "What is 10 − 3?", choices: ["5", "6", "7", "8"], answer: 2, explanation: "10 − 3 = 7. Count back from 10: 9, 8, 7!" },
+  { q: "What is 5 + 5?", choices: ["8", "9", "10", "11"], answer: 2, explanation: "5 + 5 = 10. Two fives always make ten!" },
+  { q: "What is 12 − 4?", choices: ["6", "7", "8", "9"], answer: 2, explanation: "12 − 4 = 8. Count back 4 from 12: 11, 10, 9, 8!" },
+  { q: "What is 6 + 4?", choices: ["8", "9", "10", "11"], answer: 2, explanation: "6 + 4 = 10. Any number that adds to 10 is called a 'ten pair'!" },
+  { q: "What is 14 − 6?", choices: ["6", "7", "8", "9"], answer: 2, explanation: "14 − 6 = 8. Think: 6 + ? = 14. Count up: 7, 8, 9 ... that's 8 steps!" },
+  { q: "What is 3 + 3 + 3?", choices: ["6", "7", "8", "9"], answer: 3, explanation: "3 + 3 + 3 = 9. Three groups of 3!" },
+  { q: "What is 11 − 5?", choices: ["4", "5", "6", "7"], answer: 2, explanation: "11 − 5 = 6. Count back 5 from 11: 10, 9, 8, 7, 6!" },
 ];
 
 // ─── WEAPON DEFINITIONS ─────────────────────────────────────
@@ -130,63 +119,31 @@ let gameInterval = null;
 function getWaveConfig(wave, playerCount) {
   const pc = Math.max(playerCount, 1);
   const waves = [
-    { // Wave 1
+    { // Wave 1 - Easy intro
       message: "⚡ Wave 1 — The Numbers Awaken!",
-      pawns: Math.floor(8 + pc * 2),
-      pawnHP: 40,
-      pawnSpeed: 3.5,
+      pawns: Math.floor(4 + pc),
+      pawnHP: 25,
+      pawnSpeed: 2.0,
       bossActive: false,
-      spawnInterval: 80
+      spawnInterval: 100
     },
-    { // Wave 2
-      message: "📐 Wave 2 — Geometry Strikes!",
-      pawns: Math.floor(14 + pc * 2.5),
-      pawnHP: 50,
-      pawnSpeed: 4.0,
-      bossActive: false,
-      spawnInterval: 70
-    },
-    { // Wave 3
-      message: "⚠️ Wave 3 — Pi Sends Its Minions!",
-      pawns: Math.floor(22 + pc * 3),
-      pawnHP: 60,
-      pawnSpeed: 5.0,
-      bossActive: false,
-      spawnInterval: 55
-    },
-    { // Wave 4 - Mini boss
-      message: "🔥 Wave 4 — Mini Pi Appears!",
-      pawns: Math.floor(12 + pc * 2),
-      pawnHP: 70,
-      pawnSpeed: 4.5,
+    { // Wave 2 - Mini boss
+      message: "🔥 Wave 2 — Mini Pi Appears!",
+      pawns: Math.floor(5 + pc),
+      pawnHP: 35,
+      pawnSpeed: 2.5,
       bossActive: true,
       bossHPMult: 0.3,
-      spawnInterval: 65
+      spawnInterval: 90
     },
-    { // Wave 5
-      message: "💀 Wave 5 — The Numbers Strike Back!",
-      pawns: Math.floor(26 + pc * 4),
-      pawnHP: 70,
-      pawnSpeed: 5.5,
-      bossActive: false,
-      spawnInterval: 50
-    },
-    { // Wave 6
-      message: "🌀 Wave 6 — Infinite Sequence!",
-      pawns: Math.floor(30 + pc * 4),
-      pawnHP: 80,
-      pawnSpeed: 6.5,
-      bossActive: false,
-      spawnInterval: 45
-    },
-    { // Wave 7 - FINAL BOSS
+    { // Wave 3 - Final boss
       message: "👑 FINAL WAVE — THE MIGHTY PI AWAKENS!",
-      pawns: Math.floor(16 + pc * 2),
-      pawnHP: 90,
-      pawnSpeed: 7.0,
+      pawns: Math.floor(6 + pc),
+      pawnHP: 40,
+      pawnSpeed: 3.0,
       bossActive: true,
-      bossHPMult: 1.0,
-      spawnInterval: 60
+      bossHPMult: 0.6,
+      spawnInterval: 80
     }
   ];
   return waves[Math.min(wave, waves.length - 1)];
