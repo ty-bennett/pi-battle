@@ -288,37 +288,37 @@ document.getElementById('btn-admin-reset').addEventListener('click', () => socke
 // ═══════════════════════════════════════════════
 const BLOCK_DEFS = [
   // Ship body
-  { id: 'body-fighter', label: 'setBody("fighter")', category: 'body', action: () => { customization.shipBody = 'fighter'; } },
-  { id: 'body-bomber',  label: 'setBody("bomber")',  category: 'body', action: () => { customization.shipBody = 'bomber'; } },
-  { id: 'body-scout',   label: 'setBody("scout")',   category: 'body', action: () => { customization.shipBody = 'scout'; } },
-  { id: 'body-cruiser', label: 'setBody("cruiser")', category: 'body', action: () => { customization.shipBody = 'cruiser'; } },
+  { id: 'body-fighter', label: 'setBody("fighter")', display: '🚀 Fighter Ship',  category: 'body', action: () => { customization.shipBody = 'fighter'; } },
+  { id: 'body-bomber',  label: 'setBody("bomber")',  display: '💣 Bomber Ship',   category: 'body', action: () => { customization.shipBody = 'bomber'; } },
+  { id: 'body-scout',   label: 'setBody("scout")',   display: '⚡ Scout Ship',    category: 'body', action: () => { customization.shipBody = 'scout'; } },
+  { id: 'body-cruiser', label: 'setBody("cruiser")', display: '🛸 Cruiser Ship',  category: 'body', action: () => { customization.shipBody = 'cruiser'; } },
   // Hull color
-  { id: 'color-cyan',   label: 'setColor("cyan")',   category: 'shipColor', action: () => { customization.shipColor = '#00d4ff'; } },
-  { id: 'color-red',    label: 'setColor("red")',    category: 'shipColor', action: () => { customization.shipColor = '#ff3b5c'; } },
-  { id: 'color-green',  label: 'setColor("green")',  category: 'shipColor', action: () => { customization.shipColor = '#00ff88'; } },
-  { id: 'color-purple', label: 'setColor("purple")', category: 'shipColor', action: () => { customization.shipColor = '#a855f7'; } },
-  { id: 'color-gold',   label: 'setColor("gold")',   category: 'shipColor', action: () => { customization.shipColor = '#ffd700'; } },
-  { id: 'color-white',  label: 'setColor("white")',  category: 'shipColor', action: () => { customization.shipColor = '#dde0f0'; } },
-  { id: 'color-orange', label: 'setColor("orange")', category: 'shipColor', action: () => { customization.shipColor = '#ff6b35'; } },
+  { id: 'color-cyan',   label: 'setColor("cyan")',   display: 'hull <span class="bsw" style="background:#00d4ff"></span> cyan',   category: 'shipColor', action: () => { customization.shipColor = '#00d4ff'; } },
+  { id: 'color-red',    label: 'setColor("red")',    display: 'hull <span class="bsw" style="background:#ff3b5c"></span> red',    category: 'shipColor', action: () => { customization.shipColor = '#ff3b5c'; } },
+  { id: 'color-green',  label: 'setColor("green")',  display: 'hull <span class="bsw" style="background:#00ff88"></span> green',  category: 'shipColor', action: () => { customization.shipColor = '#00ff88'; } },
+  { id: 'color-purple', label: 'setColor("purple")', display: 'hull <span class="bsw" style="background:#a855f7"></span> purple', category: 'shipColor', action: () => { customization.shipColor = '#a855f7'; } },
+  { id: 'color-gold',   label: 'setColor("gold")',   display: 'hull <span class="bsw" style="background:#ffd700"></span> gold',   category: 'shipColor', action: () => { customization.shipColor = '#ffd700'; } },
+  { id: 'color-white',  label: 'setColor("white")',  display: 'hull <span class="bsw" style="background:#dde0f0"></span> white',  category: 'shipColor', action: () => { customization.shipColor = '#dde0f0'; } },
+  { id: 'color-orange', label: 'setColor("orange")', display: 'hull <span class="bsw" style="background:#ff6b35"></span> orange', category: 'shipColor', action: () => { customization.shipColor = '#ff6b35'; } },
   // Accent color
-  { id: 'accent-red',    label: 'setAccent("red")',    category: 'accentColor', action: () => { customization.accentColor = '#ff3b5c'; } },
-  { id: 'accent-cyan',   label: 'setAccent("cyan")',   category: 'accentColor', action: () => { customization.accentColor = '#00d4ff'; } },
-  { id: 'accent-gold',   label: 'setAccent("gold")',   category: 'accentColor', action: () => { customization.accentColor = '#ffd700'; } },
-  { id: 'accent-green',  label: 'setAccent("green")',  category: 'accentColor', action: () => { customization.accentColor = '#00ff88'; } },
-  { id: 'accent-purple', label: 'setAccent("purple")', category: 'accentColor', action: () => { customization.accentColor = '#a855f7'; } },
-  { id: 'accent-orange', label: 'setAccent("orange")', category: 'accentColor', action: () => { customization.accentColor = '#ff6b35'; } },
+  { id: 'accent-red',    label: 'setAccent("red")',    display: 'accent <span class="bsw" style="background:#ff3b5c"></span> red',    category: 'accentColor', action: () => { customization.accentColor = '#ff3b5c'; } },
+  { id: 'accent-cyan',   label: 'setAccent("cyan")',   display: 'accent <span class="bsw" style="background:#00d4ff"></span> cyan',   category: 'accentColor', action: () => { customization.accentColor = '#00d4ff'; } },
+  { id: 'accent-gold',   label: 'setAccent("gold")',   display: 'accent <span class="bsw" style="background:#ffd700"></span> gold',   category: 'accentColor', action: () => { customization.accentColor = '#ffd700'; } },
+  { id: 'accent-green',  label: 'setAccent("green")',  display: 'accent <span class="bsw" style="background:#00ff88"></span> green',  category: 'accentColor', action: () => { customization.accentColor = '#00ff88'; } },
+  { id: 'accent-purple', label: 'setAccent("purple")', display: 'accent <span class="bsw" style="background:#a855f7"></span> purple', category: 'accentColor', action: () => { customization.accentColor = '#a855f7'; } },
+  { id: 'accent-orange', label: 'setAccent("orange")', display: 'accent <span class="bsw" style="background:#ff6b35"></span> orange', category: 'accentColor', action: () => { customization.accentColor = '#ff6b35'; } },
   // Pattern
-  { id: 'pattern-plain',   label: 'setPattern("plain")',   category: 'pattern', action: () => { customization.pattern = 'plain'; } },
-  { id: 'pattern-stripes', label: 'setPattern("stripes")', category: 'pattern', action: () => { customization.pattern = 'stripes'; } },
-  { id: 'pattern-chevron', label: 'setPattern("chevron")', category: 'pattern', action: () => { customization.pattern = 'chevron'; } },
-  { id: 'pattern-dots',    label: 'setPattern("dots")',    category: 'pattern', action: () => { customization.pattern = 'dots'; } },
+  { id: 'pattern-plain',   label: 'setPattern("plain")',   display: '▪ plain',    category: 'pattern', action: () => { customization.pattern = 'plain'; } },
+  { id: 'pattern-stripes', label: 'setPattern("stripes")', display: '☰ stripes',  category: 'pattern', action: () => { customization.pattern = 'stripes'; } },
+  { id: 'pattern-chevron', label: 'setPattern("chevron")', display: '⋀ chevron',  category: 'pattern', action: () => { customization.pattern = 'chevron'; } },
+  { id: 'pattern-dots',    label: 'setPattern("dots")',    display: '⬤ dots',     category: 'pattern', action: () => { customization.pattern = 'dots'; } },
   // Engine glow
-  { id: 'engine-blue',   label: 'setEngine("blue")',   category: 'engineColor', action: () => { customization.engineColor = '#00d4ff'; } },
-  { id: 'engine-orange', label: 'setEngine("orange")', category: 'engineColor', action: () => { customization.engineColor = '#ff6b35'; } },
-  { id: 'engine-purple', label: 'setEngine("purple")', category: 'engineColor', action: () => { customization.engineColor = '#a855f7'; } },
-  { id: 'engine-green',  label: 'setEngine("green")',  category: 'engineColor', action: () => { customization.engineColor = '#00ff88'; } },
-  { id: 'engine-gold',   label: 'setEngine("gold")',   category: 'engineColor', action: () => { customization.engineColor = '#ffd700'; } },
-  { id: 'engine-red',    label: 'setEngine("red")',    category: 'engineColor', action: () => { customization.engineColor = '#ff3b5c'; } },
+  { id: 'engine-blue',   label: 'setEngine("blue")',   display: 'engine <span class="bsw" style="background:#00d4ff"></span> blue',   category: 'engineColor', action: () => { customization.engineColor = '#00d4ff'; } },
+  { id: 'engine-orange', label: 'setEngine("orange")', display: 'engine <span class="bsw" style="background:#ff6b35"></span> orange', category: 'engineColor', action: () => { customization.engineColor = '#ff6b35'; } },
+  { id: 'engine-purple', label: 'setEngine("purple")', display: 'engine <span class="bsw" style="background:#a855f7"></span> purple', category: 'engineColor', action: () => { customization.engineColor = '#a855f7'; } },
+  { id: 'engine-green',  label: 'setEngine("green")',  display: 'engine <span class="bsw" style="background:#00ff88"></span> green',  category: 'engineColor', action: () => { customization.engineColor = '#00ff88'; } },
+  { id: 'engine-gold',   label: 'setEngine("gold")',   display: 'engine <span class="bsw" style="background:#ffd700"></span> gold',   category: 'engineColor', action: () => { customization.engineColor = '#ffd700'; } },
+  { id: 'engine-red',    label: 'setEngine("red")',    display: 'engine <span class="bsw" style="background:#ff3b5c"></span> red',    category: 'engineColor', action: () => { customization.engineColor = '#ff3b5c'; } },
 ];
 
 let codeAreaBlocks = [];
@@ -355,7 +355,7 @@ function initCustomizer() {
     for (const def of defs) {
       const el = document.createElement('div');
       el.className = `code-block cat-${def.category}`;
-      el.textContent = def.label;
+      el.innerHTML = def.display;
       el.draggable = true;
       el.dataset.blockId = def.id;
 
@@ -437,7 +437,8 @@ function renderCodeArea() {
   codeAreaBlocks.forEach((def, i) => {
     const el = document.createElement('div');
     el.className = `code-block cat-${def.category}`;
-    el.innerHTML = `${def.label} <button class="remove-block" title="Remove">×</button>`;
+    el.style.zIndex = codeAreaBlocks.length - i;
+    el.innerHTML = `<span class="block-label">${def.display}</span><button class="remove-block" title="Remove">×</button>`;
     el.querySelector('.remove-block').addEventListener('click', (e) => {
       e.stopPropagation();
       codeAreaBlocks.splice(i, 1);

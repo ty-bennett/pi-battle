@@ -340,33 +340,68 @@ body {
   margin-top: 4px;
 }
 .palette-section-header:first-child { margin-top: 0; }
+/* Palette blocks: vertical column, slight gap between them */
 .palette-section-group {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-bottom: 4px;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 14px;
 }
+.palette-section-group .code-block + .code-block {
+  margin-top: 5px;
+}
+
+/* ── Scratch-style puzzle piece blocks ─────────────────────── */
 .code-block {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-family: var(--font-code);
-  font-size: 11px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 14px 36px 14px 12px; /* top/bottom include notch+bump space */
+  box-sizing: border-box;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
   cursor: grab;
   user-select: none;
-  border: 2px solid transparent;
-  transition: transform 0.15s, box-shadow 0.15s;
   white-space: nowrap;
+  border: none;
+  border-radius: 0;
+  /* Puzzle piece: notch cut from top (y=0–10), bump on bottom (y=calc(100%-10)–100%) */
+  clip-path: polygon(
+    0 10px,
+    12px 10px, 12px 0, 26px 0, 26px 10px,
+    100% 10px,
+    100% calc(100% - 10px),
+    26px calc(100% - 10px), 26px 100%, 12px 100%, 12px calc(100% - 10px),
+    0 calc(100% - 10px)
+  );
+  transition: filter 0.15s;
+  filter: drop-shadow(0 3px 0 rgba(0,0,0,0.35));
 }
 .code-block:hover {
-  transform: scale(1.05);
-  z-index: 5;
+  filter: drop-shadow(0 3px 0 rgba(0,0,0,0.35)) brightness(1.18);
 }
 .code-block:active { cursor: grabbing; }
-.code-block.cat-body        { background: #1a2e4a; color: #7cd4ff; border-color: #2a4a70; }
-.code-block.cat-shipColor   { background: #1a2a3a; color: #80c8ff; border-color: #2a4060; }
-.code-block.cat-accentColor { background: #3a1a2a; color: #ff80b4; border-color: #5a2a3a; }
-.code-block.cat-pattern     { background: #2a2a1a; color: #e0e080; border-color: #4a4a2a; }
-.code-block.cat-engineColor { background: #3a1a0a; color: #ffaa60; border-color: #5a3a1a; }
+
+/* Scratch-inspired category colors */
+.code-block.cat-body        { background: #4C97FF; }
+.code-block.cat-shipColor   { background: #9966FF; }
+.code-block.cat-accentColor { background: #CF63CF; }
+.code-block.cat-pattern     { background: #3dba3d; }
+.code-block.cat-engineColor { background: #FF8C1A; }
+
+/* Color swatch dot inside block */
+.bsw {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.55);
+  vertical-align: middle;
+  margin: 0 3px;
+  flex-shrink: 0;
+}
 
 /* Code workspace — in center column */
 .code-workspace {
@@ -392,18 +427,19 @@ body {
 }
 .code-area {
   min-height: 100px;
-  background: var(--bg-input);
-  border-radius: 6px;
-  padding: 10px;
+  background: #1a1a2e;
+  border-radius: 8px;
+  padding: 10px 10px 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  border: 2px dashed var(--border);
+  gap: 0;
+  border: 2px solid rgba(255,255,255,0.06);
   transition: border-color 0.2s;
+  overflow: visible;
 }
 .code-area.drag-over {
   border-color: var(--cyan);
-  background: rgba(0,212,255,0.05);
+  background: rgba(0,212,255,0.04);
 }
 .code-placeholder {
   color: var(--text-muted);
@@ -411,27 +447,51 @@ body {
   text-align: center;
   padding: 30px;
 }
+
+/* Workspace blocks: stack/interlock with negative margin */
 .code-area .code-block {
   position: relative;
+  width: 100%;
 }
+.code-area .code-block + .code-block {
+  margin-top: -10px;
+}
+
+/* First workspace block has no top notch (flat/hat top) */
+.code-area .code-block:first-child {
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - 10px),
+    26px calc(100% - 10px), 26px 100%, 12px 100%, 12px calc(100% - 10px),
+    0 calc(100% - 10px)
+  );
+}
+
+.block-label {
+  flex: 1;
+  pointer-events: none;
+}
+
 .code-area .code-block .remove-block {
   position: absolute;
-  right: 4px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255,60,90,0.3);
+  background: rgba(0,0,0,0.25);
   border: none;
-  color: var(--red);
+  color: #fff;
   cursor: pointer;
   border-radius: 50%;
   width: 18px;
   height: 18px;
-  font-size: 10px;
+  font-size: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   transition: opacity 0.15s;
+  z-index: 10;
 }
 .code-area .code-block:hover .remove-block { opacity: 1; }
 

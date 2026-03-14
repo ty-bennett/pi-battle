@@ -40,7 +40,7 @@ const CONFIG = {
   PLAYER_RADIUS: 18,
   BOSS_BASE_HP: 5000,
   BOSS_HP_PER_PLAYER: 1500,
-  WAVE_COUNT: 8,
+  WAVE_COUNT: 7,
   PAWN_HP: 60,
   PAWN_SPEED: 1.5,
   PAWN_RADIUS: 14,
@@ -55,38 +55,38 @@ const CONFIG = {
 
 // ─── TRIVIA BANK ────────────────────────────────────────────
 const TRIVIA = [
-  // Math
-  { q: "What is 7 × 8?", choices: ["54", "56", "58", "64"], answer: 1, explanation: "7 × 8 = 56. Try counting by 7s: 7, 14, 21, 28, 35, 42, 49, 56!" },
-  { q: "What is 144 ÷ 12?", choices: ["10", "11", "12", "14"], answer: 2, explanation: "144 ÷ 12 = 12. 12 × 12 = 144 — that's called a perfect square!" },
-  { q: "What shape has exactly 3 sides?", choices: ["Square", "Triangle", "Pentagon", "Hexagon"], answer: 1, explanation: "A triangle has 3 sides. 'Tri' means three!" },
-  { q: "What is 15 + 27?", choices: ["32", "42", "52", "41"], answer: 1, explanation: "15 + 27 = 42. You can break it up: 15 + 25 = 40, then add 2 more!" },
-  { q: "How many sides does a hexagon have?", choices: ["5", "6", "7", "8"], answer: 1, explanation: "A hexagon has 6 sides. 'Hex' means six in Greek!" },
-  { q: "What is 9 × 9?", choices: ["72", "81", "90", "99"], answer: 1, explanation: "9 × 9 = 81. Here's a trick: 9 × 9 is one less than 9 × 10 (90)!" },
-  { q: "What is half of 64?", choices: ["22", "32", "34", "42"], answer: 1, explanation: "Half of 64 is 32. 32 + 32 = 64!" },
-  { q: "What are the first 3 digits of Pi?", choices: ["3.14", "3.41", "2.71", "3.15"], answer: 0, explanation: "Pi starts with 3.14159... It goes on forever and never repeats!" },
-  { q: "What is 100 − 37?", choices: ["73", "67", "63", "57"], answer: 2, explanation: "100 − 37 = 63. A trick: 100 − 40 = 60, then add 3 back!" },
-  { q: "Which number is a prime number?", choices: ["4", "6", "9", "7"], answer: 3, explanation: "7 is prime — it can only be divided evenly by 1 and itself!" },
-  { q: "What is 12 × 5?", choices: ["50", "55", "60", "65"], answer: 2, explanation: "12 × 5 = 60. Quick trick: 10×5=50, plus 2×5=10, total 60!" },
-  { q: "What is the square root of 25?", choices: ["3", "4", "5", "6"], answer: 2, explanation: "√25 = 5 because 5 × 5 = 25!" },
-  { q: "What is 3 + 5 × 2?", choices: ["16", "13", "11", "10"], answer: 1, explanation: "Order of operations! Multiply first: 5×2=10, then add 3 = 13." },
-  { q: "How many degrees are in a right angle?", choices: ["45°", "90°", "180°", "360°"], answer: 1, explanation: "A right angle is exactly 90°, like the corner of a square!" },
-  { q: "What fraction equals 0.5?", choices: ["1/3", "1/4", "1/2", "2/3"], answer: 2, explanation: "0.5 = 1/2. Half of anything is one part out of two!" },
-  // Technology
-  { q: "What does CPU stand for?", choices: ["Central Processing Unit", "Computer Power Unit", "Central Power Utility", "Core Processing Unit"], answer: 0, explanation: "CPU = Central Processing Unit. It's the 'brain' of a computer!" },
-  { q: "What does HTML stand for?", choices: ["HyperText Makeup Language", "HyperText Markup Language", "HighTech Modern Language", "Home Tool Markup Language"], answer: 1, explanation: "HTML = HyperText Markup Language. It's how web pages are built!" },
-  { q: "What animal is the Python language named after?", choices: ["A snake", "A comedy group", "A bird", "A lizard"], answer: 1, explanation: "Python is named after Monty Python's Flying Circus, a comedy show!" },
-  { q: "What does 'www' stand for?", choices: ["Wide Web World", "World Wide Web", "Web World Wide", "World Web Wide"], answer: 1, explanation: "WWW = World Wide Web, invented by Tim Berners-Lee in 1989!" },
-  { q: "In binary (computer language), what does 10 equal?", choices: ["1", "2", "5", "10"], answer: 1, explanation: "In binary, 10 = 2! Computers use only 0s and 1s to count." },
-  { q: "What does RAM stand for?", choices: ["Random Access Memory", "Read All Memory", "Run Any Machine", "Really Awesome Memory"], answer: 0, explanation: "RAM = Random Access Memory. It's your computer's short-term memory!" },
-  { q: "What is the name of the first programmable computer?", choices: ["iPhone", "ENIAC", "MacBook", "Xbox"], answer: 1, explanation: "ENIAC (1945) was one of the first programmable computers. It filled an entire room!" },
-  { q: "What does 'bug' mean in programming?", choices: ["An insect", "A mistake in code", "A feature", "A type of computer"], answer: 1, explanation: "A 'bug' is an error in code. The term came from an actual moth found in an early computer!" },
-  { q: "What language do most websites use for styling?", choices: ["Java", "Python", "CSS", "C++"], answer: 2, explanation: "CSS (Cascading Style Sheets) makes websites look pretty with colors, fonts, and layouts!" },
-  { q: "What does 'AI' stand for?", choices: ["Auto Internet", "Artificial Intelligence", "Advanced Input", "Automatic Info"], answer: 1, explanation: "AI = Artificial Intelligence. It's when computers learn to do smart things!" },
-  { q: "Which company created the Java programming language?", choices: ["Apple", "Microsoft", "Sun Microsystems", "Google"], answer: 2, explanation: "Java was created by Sun Microsystems in 1995. It runs on billions of devices!" },
-  { q: "What does USB stand for?", choices: ["Universal Serial Bus", "Ultra Speed Bytes", "United System Board", "Universal System Backup"], answer: 0, explanation: "USB = Universal Serial Bus. It connects devices like mice, keyboards, and drives!" },
-  { q: "What is an algorithm?", choices: ["A type of computer", "A step-by-step set of instructions", "A programming language", "A type of robot"], answer: 1, explanation: "An algorithm is a set of step-by-step instructions to solve a problem, like a recipe!" },
-  { q: "How many bits are in one byte?", choices: ["2", "4", "8", "16"], answer: 2, explanation: "1 byte = 8 bits. A bit is the smallest piece of data: just a 0 or a 1!" },
-  { q: "What does GPS stand for?", choices: ["Global Positioning System", "General Power Supply", "Graphical Processing System", "Global Phone Service"], answer: 0, explanation: "GPS = Global Positioning System. It uses satellites in space to find your location!" },
+  // Quick math
+  { q: "What is 8 × 7?", choices: ["54", "56", "63", "64"], answer: 1, explanation: "8 × 7 = 56. Tip: 8×7 = (8×5) + (8×2) = 40 + 16 = 56!" },
+  { q: "What is 4 × 4?", choices: ["12", "16", "18", "20"], answer: 1, explanation: "4 × 4 = 16. It's a perfect square — 4 rows of 4!" },
+  { q: "What is 100 − 25?", choices: ["65", "70", "75", "80"], answer: 2, explanation: "100 − 25 = 75. A quarter of 100 is 25, so three quarters is 75!" },
+  { q: "What is 6 × 6?", choices: ["30", "36", "42", "48"], answer: 1, explanation: "6 × 6 = 36. Six sixes are thirty-six!" },
+  { q: "What is 3 × 9?", choices: ["24", "27", "30", "33"], answer: 1, explanation: "3 × 9 = 27. Tip: 9 × anything — the digits always add up to 9 (2+7=9)!" },
+  { q: "What is 50 + 50?", choices: ["90", "95", "100", "110"], answer: 2, explanation: "50 + 50 = 100. Two halves make a whole!" },
+  { q: "What is 12 × 3?", choices: ["30", "33", "36", "39"], answer: 2, explanation: "12 × 3 = 36. Try: 10×3=30, plus 2×3=6, total 36!" },
+  { q: "What are the first 3 digits of Pi?", choices: ["3.14", "3.41", "2.71", "3.15"], answer: 0, explanation: "Pi = 3.14159... It goes on forever and never repeats — that's what makes it special!" },
+  { q: "What is 2 to the power of 3?", choices: ["6", "8", "9", "16"], answer: 1, explanation: "2³ = 2×2×2 = 8. Computers double things like this all the time!" },
+  { q: "What is 5 × 5 × 2?", choices: ["25", "40", "50", "60"], answer: 2, explanation: "5×5=25, then 25×2=50. Breaking it into steps is how computers think!" },
+  // Coding fundamentals
+  { q: "In coding, what is a 'variable'?", choices: ["A type of loop", "A named container for storing data", "A kind of bug", "A programming language"], answer: 1, explanation: "A variable stores data! In this game, 'hp' is a variable that holds your health points." },
+  { q: "What does a loop do in programming?", choices: ["Crashes the program", "Repeats a block of code", "Deletes data", "Connects to the internet"], answer: 1, explanation: "A loop repeats code! This game runs a loop 20 times per second to update every ship and bullet." },
+  { q: "What is a 'function' in code?", choices: ["A math equation only", "A bug in the program", "A named block of reusable code", "A type of computer"], answer: 2, explanation: "Functions are reusable actions! This game has functions like movePlayer() and shootBullet()." },
+  { q: "What does 'if' do in programming?", choices: ["Repeats code forever", "Checks a condition and decides what to do", "Stores a number", "Prints text to screen"], answer: 1, explanation: "If-statements make decisions! Like: if (bullet hits enemy) { damage them }." },
+  { q: "What is a 'bug' in programming?", choices: ["An insect in the computer", "A fast piece of code", "An error or mistake in code", "Extra memory"], answer: 2, explanation: "A bug is a mistake in code! The term came from an actual moth found inside an early computer in 1947." },
+  { q: "What language was this game built with?", choices: ["Python", "Java", "Scratch", "JavaScript"], answer: 3, explanation: "Pi Battle Arena runs on JavaScript! It's the language that makes websites and games interactive." },
+  { q: "What does HTML stand for?", choices: ["HyperText Makeup Language", "HyperText Markup Language", "HighTech Modern Language", "How To Make Links"], answer: 1, explanation: "HTML = HyperText Markup Language. It's the skeleton of every web page!" },
+  { q: "What does CSS do on a website?", choices: ["Connects to databases", "Controls styling and appearance", "Runs the game logic", "Handles user logins"], answer: 1, explanation: "CSS controls how things look — colors, fonts, layouts. It's what makes a website beautiful!" },
+  { q: "What does CPU stand for?", choices: ["Computer Power Unit", "Central Processing Unit", "Core Program Utility", "Central Power Updater"], answer: 1, explanation: "CPU = Central Processing Unit — the brain of a computer that runs all your code!" },
+  { q: "How many bits are in one byte?", choices: ["2", "4", "8", "16"], answer: 2, explanation: "1 byte = 8 bits. A bit is the tiniest piece of data: just a 0 or 1. 8 bits can store 256 different values!" },
+  { q: "In binary, what does '1 + 1' equal?", choices: ["2", "11", "10", "0"], answer: 2, explanation: "In binary, 1 + 1 = 10 (which means 2). Computers only use 0s and 1s to do ALL math!" },
+  { q: "What does RAM stand for?", choices: ["Random Access Memory", "Run All Machines", "Read Any Media", "Really Awesome Memory"], answer: 0, explanation: "RAM = Random Access Memory — your computer's short-term workspace while programs run!" },
+  { q: "What is an algorithm?", choices: ["A type of computer chip", "A programming language", "A step-by-step recipe for solving a problem", "A kind of variable"], answer: 2, explanation: "An algorithm is a step-by-step plan! The AI in this game uses algorithms to aim at players." },
+  { q: "What is 'debugging'?", choices: ["Adding new features", "Finding and fixing errors in code", "Deleting old code", "Running a program faster"], answer: 1, explanation: "Debugging = finding and fixing bugs! Professional coders spend a lot of time debugging." },
+  { q: "What is a server?", choices: ["A waiter at a restaurant", "A computer that delivers data to other computers", "A type of keyboard", "A programming language"], answer: 1, explanation: "A server is a computer that shares resources! Right now, a server is running this entire game." },
+  { q: "What does '==' mean in most programming languages?", choices: ["Set a variable", "Multiply two numbers", "Check if two values are equal", "Print to the screen"], answer: 2, explanation: "== checks equality! In this game: if (hp == 0) means 'if health equals zero, the player is dead.'" },
+  { q: "What is a 'boolean'?", choices: ["A type of loop", "A value that is either true or false", "A big number", "A color in CSS"], answer: 1, explanation: "A boolean is true or false — like a light switch! In this game, 'alive' is a boolean: true or false." },
+  { q: "What does the internet use to send data?", choices: ["Fax machines", "Packets", "USB cables only", "Telephone calls"], answer: 1, explanation: "The internet breaks data into small pieces called packets that travel separately and reassemble!" },
+  { q: "What does 'open source' mean?", choices: ["The code is secret", "Anyone can view and contribute to the code", "The program is free forever", "The computer is always on"], answer: 1, explanation: "Open source means the code is public! Many famous tools like Linux, Python, and VS Code are open source." },
+  { q: "What is a pixel?", choices: ["A type of coding error", "A unit of memory", "The smallest dot of color on a screen", "A network connection"], answer: 2, explanation: "A pixel is a tiny square of color. Your screen has millions of them — this whole game is made of pixels!" },
 ];
 
 // ─── WEAPON DEFINITIONS ─────────────────────────────────────
@@ -147,23 +147,15 @@ function getWaveConfig(wave, playerCount) {
       spawnInterval: 70
     },
     { // Wave 3
-      message: "🔢 Wave 3 — The Equation Horde!",
-      pawns: Math.floor(18 + pc * 3),
-      pawnHP: 55,
-      pawnSpeed: 4.5,
-      bossActive: false,
-      spawnInterval: 60
-    },
-    { // Wave 4
-      message: "⚠️ Wave 4 — Pi Sends Its Minions!",
+      message: "⚠️ Wave 3 — Pi Sends Its Minions!",
       pawns: Math.floor(22 + pc * 3),
       pawnHP: 60,
       pawnSpeed: 5.0,
       bossActive: false,
       spawnInterval: 55
     },
-    { // Wave 5 - Mini boss
-      message: "🔥 Wave 5 — Mini Pi Appears!",
+    { // Wave 4 - Mini boss
+      message: "🔥 Wave 4 — Mini Pi Appears!",
       pawns: Math.floor(12 + pc * 2),
       pawnHP: 70,
       pawnSpeed: 4.5,
@@ -171,23 +163,23 @@ function getWaveConfig(wave, playerCount) {
       bossHPMult: 0.3,
       spawnInterval: 65
     },
-    { // Wave 6
-      message: "💀 Wave 6 — The Numbers Strike Back!",
+    { // Wave 5
+      message: "💀 Wave 5 — The Numbers Strike Back!",
       pawns: Math.floor(26 + pc * 4),
       pawnHP: 70,
       pawnSpeed: 5.5,
       bossActive: false,
       spawnInterval: 50
     },
-    { // Wave 7
-      message: "🌀 Wave 7 — Infinite Sequence!",
+    { // Wave 6
+      message: "🌀 Wave 6 — Infinite Sequence!",
       pawns: Math.floor(30 + pc * 4),
       pawnHP: 80,
       pawnSpeed: 6.5,
       bossActive: false,
       spawnInterval: 45
     },
-    { // Wave 8 - FINAL BOSS
+    { // Wave 7 - FINAL BOSS
       message: "👑 FINAL WAVE — THE MIGHTY PI AWAKENS!",
       pawns: Math.floor(16 + pc * 2),
       pawnHP: 90,
@@ -586,10 +578,10 @@ function updatePlayers() {
     // Shooting
     if (p.input.shooting && p.fireTimer <= 0) {
       const ups = p.upgrades || { damage: 0, fireRate: 0, multiShot: 0, speed: 0 };
-      const dmg      = 8  + ups.damage   * 5;
-      const fr       = Math.max(5, 15 - ups.fireRate  * 2);
+      const dmg      = 8  + ups.damage   * 10;
+      const fr       = Math.max(2, 15 - ups.fireRate  * 2.5);
       const spread   = 1  + ups.multiShot;
-      const bspeed   = CONFIG.PROJECTILE_SPEED + ups.speed * 3;
+      const bspeed   = CONFIG.PROJECTILE_SPEED + ups.speed * 5;
       const angle    = p.input.aimAngle || 0;
       const bcolor   = '#00d4ff';
 
@@ -742,6 +734,7 @@ io.on('connection', (socket) => {
       x: 200 + Math.random() * (CONFIG.ARENA_W - 400),
       y: CONFIG.ARENA_H - 150 + Math.random() * 80,
       hp: CONFIG.PLAYER_HP,
+      radius: CONFIG.PLAYER_RADIUS,
       alive: true,
       weapon: 'laser',
       customization: data.customization || {},
