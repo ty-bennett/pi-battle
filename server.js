@@ -40,7 +40,7 @@ const CONFIG = {
   PLAYER_RADIUS: 18,
   BOSS_BASE_HP: 1500,
   BOSS_HP_PER_PLAYER: 400,
-  WAVE_COUNT: 3,
+  WAVE_COUNT: 1,
   PAWN_HP: 60,
   PAWN_SPEED: 1.5,
   PAWN_RADIUS: 14,
@@ -119,31 +119,14 @@ let gameInterval = null;
 function getWaveConfig(wave, playerCount) {
   const pc = Math.max(playerCount, 1);
   const waves = [
-    { // Wave 1 - Easy intro
-      message: "⚡ Wave 1 — The Numbers Awaken!",
-      pawns: Math.floor(4 + pc),
-      pawnHP: 25,
-      pawnSpeed: 2.0,
-      bossActive: false,
-      spawnInterval: 100
-    },
-    { // Wave 2 - Mini boss
-      message: "🔥 Wave 2 — Mini Pi Appears!",
+    { // Wave 1 - Boss battle
+      message: "👑 BATTLE BEGINS — DEFEAT THE MIGHTY PI!",
       pawns: Math.floor(5 + pc),
-      pawnHP: 35,
-      pawnSpeed: 2.5,
-      bossActive: true,
-      bossHPMult: 0.3,
-      spawnInterval: 90
-    },
-    { // Wave 3 - Final boss
-      message: "👑 FINAL WAVE — THE MIGHTY PI AWAKENS!",
-      pawns: Math.floor(6 + pc),
-      pawnHP: 40,
-      pawnSpeed: 3.0,
+      pawnHP: 30,
+      pawnSpeed: 2.0,
       bossActive: true,
       bossHPMult: 0.6,
-      spawnInterval: 80
+      spawnInterval: 90
     }
   ];
   return waves[Math.min(wave, waves.length - 1)];
